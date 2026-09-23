@@ -5,7 +5,7 @@ using System.Text;
 
 namespace assemblySimulator
 {
-    internal class Reg
+    public class Reg
     {
         private UInt64 value = 0;
         private readonly ushort length;
@@ -49,7 +49,7 @@ namespace assemblySimulator
             }
         }
     }
-    internal class RegisterBlock
+    public class RegisterBlock
     {
         private readonly Reg[] registers;
         private DebugManager debuger;

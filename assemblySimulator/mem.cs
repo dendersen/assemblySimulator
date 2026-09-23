@@ -9,7 +9,7 @@ namespace assemblySimulator
         public Thread memUser;
         public UInt64 address;
     }
-    internal class Mem
+    public class Mem
     {
         readonly public short bytesPerAddress;
         private readonly Mutex memInUse;

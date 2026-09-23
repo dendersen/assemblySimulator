@@ -6,11 +6,15 @@ using System.Text;
 
 namespace assemblySimulator
 {
-    internal class DebugManager
+    public class DebugManager
     {
         private bool enabled = false;
         private LinkedList<ushort> registerReadStops = new();
         private LinkedList<ushort> registerWriteStops = new();
+        public void AwaitHalt()
+        {
+            throw new NotImplementedException();
+        }
         public void SetBreakOnRegRead(ushort regNum)
         {
             registerReadStops.AddLast(regNum);
@@ -58,7 +62,7 @@ namespace assemblySimulator
         private void Inspector_()
         {
             while (true) {
-                Console.WriteLine("\nwelcome to the debug terminal, please write a command, ? for help")
+                Console.WriteLine("\nwelcome to the debug terminal, please write a command, ? for help");
                 string? userCommand = Console.ReadLine();
                 if (userCommand == null) {
                     Console.WriteLine("unkown error, leaving terminal");

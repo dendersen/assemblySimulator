@@ -2,17 +2,18 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Text;
 
 namespace assemblySimulator
 {
-    internal class OsHandler
+    public class OsHandler
     {
         private TextReader stdIn;
         private TextWriter stdOut;
         private bool isStdOutTerminal;
         private TextWriter[] altOut;
-        private Mem mem;
+        internal Mem mem;
         private byte memMode = 0;
         private InstructionSet? instructionSet;
         public OsHandler(Mem mem,TextReader? stdIn, TextWriter? stdOut)
@@ -108,6 +109,44 @@ namespace assemblySimulator
             }
         }
         /**
+         * writes a string to the console starting at a specific address in memory
+         * continues until a null byte is reached, or the end of memory is reached
+         * 
+         * to read exactly one byte from each address, set spacing negative
+         * when abs of the negative number will equal the byte (lowest to highest) read from memory
+         * otherwise spacing defines how many bytes to skip between each read from memory
+         * 
+         * quitOnFull swaps from quiting when a null byte is reached to quitting when a null address is reached
+         * meaning it quits when the all memory in one address is 0, instead of when the read byte in an address is 0
+         */
+        public void WriteStringConsole(UInt64 startingAddress, int spacing, bool quitOnFull)
+        {
+            UInt64 address = startingAddress;
+            int byteOffset = 0;
+            if (spacing < 0)
+            {
+                byteOffset = -spacing - 1;
+            }
+            while (((this.mem.Read(address) & (0xFFu << (byteOffset * 8))) != 0 && !quitOnFull) || 
+                   ((this.mem.Read(address) != 0) && quitOnFull))
+            {
+                WriteConsoleSingle(address, byteOffset);
+                if (spacing < 0)
+                {
+                    address++;
+                }
+                else
+                {
+                    byteOffset += spacing;
+                }
+                while(byteOffset >= this.mem.bytesPerAddress)
+                {
+                    byteOffset -= this.mem.bytesPerAddress;
+                    address++;
+                }
+            }
+        }
+        /**
          * write a single byte from memory at a specific byte offset into the 
          * this has no interation with the memMode, it will always readto the specified byte offset
          */
@@ -196,17 +235,25 @@ namespace assemblySimulator
             mem.Write(TargetAdress, memValue);
         }
     }
-    abstract class InstructionSet
+    abstract public class InstructionSet
     {
-        Mem memTarget;
-        // Reg regTarget;
-        OsHandler os;
-        public InstructionSet(ref Mem memTarget/*, ref Reg regTarget*/, OsHandler os)
+        protected Mem memTarget;
+        protected RegisterBlock regTarget;
+        protected OsHandler os;
+        protected DebugManager? debug;
+        public static readonly short memBytesPerAddress = 0;
+        public static readonly UInt64? regCount = null;
+        public static readonly UInt64[]? regValues = null;
+        public static readonly bool[]? regWritable = null;
+        public InstructionSet(ref Mem memTarget, ref RegisterBlock regTarget, OsHandler os)
         {
             this.memTarget = memTarget;
-            //this.regTarget = regTarget;
+            this.regTarget = regTarget;
             this.os = os;
         }
+        public abstract void JumpOverride(UInt64 address);
+        public abstract void JumpRelative(Int64 offset);
+        public abstract void ExecuteInstruction(UInt64 instruction);
         /**
          * tool for allowing other components to recieve the currently used opcode from instruction
          */
