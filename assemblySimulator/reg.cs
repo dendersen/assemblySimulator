@@ -52,7 +52,7 @@ namespace assemblySimulator
     public class RegisterBlock
     {
         private readonly Reg[] registers;
-        private DebugManager debuger;
+        private DebugManager? debuger;
         public RegisterBlock(int registerCount, ushort registerLength)
         {
             this.registers = new Reg[registerCount];

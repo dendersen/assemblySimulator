@@ -5,7 +5,13 @@ public class MainClass
 {
     public static void Main()
     {
-        TestMem(8, 100_000);
+        List<Type> loadedInstruction = [];
+        InstructionLoader.PickNewInstructionSet(typeof(InstructionSet), ref loadedInstruction);
+        for (int i = 0; i < loadedInstruction.Count; i++)
+        {
+            Console.WriteLine($"Loaded instruction: {{{i}}}", loadedInstruction[i].Name);
+        }
+        //TestMem(8, 100_000);
     }
     public static UInt64 mask(int bitCnt)
     {
@@ -18,7 +24,6 @@ public class MainClass
             Mem mem = new((UInt64)maxAddress, (short)byteCnt, 10);
             for (int i = 1; i < byteCnt; i++)
             {
-
                 int offset = i * 8;
                 for (int j = 0; (UInt64)j < maxAddress; j++)
                 {

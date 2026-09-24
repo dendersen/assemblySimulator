@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Reflection;
+using System.Runtime.Loader;
 using System.Text;
 
 namespace assemblySimulator
@@ -261,14 +263,6 @@ namespace assemblySimulator
         /**
          * tool for allowing other components to know which registers will be written to by this instruction
          */
-        public abstract UInt64[] GetRegsWrite(UInt64 instruction);
-        /**
-         * tool for allowing other components to knwo which registers will be read from by this instruction
-         */
-        public abstract UInt64[] GetRegsRead(UInt64 instruction);
-        /**
-         * incriment the PC to the next instruction
-         */
         public abstract void IncrimentPC();
         /**
          * provide the address the PC currently points to
@@ -288,11 +282,122 @@ namespace assemblySimulator
          * allow writting an array into memory
          * formats the raw memory structure to fit into the number system of a UInt64
          */
-        public abstract void ReadArrayFromMem(UInt64 startAddress, UInt64[] value, int bytesPerIndex);
+        public abstract UInt64[] ReadArrayFromMem(UInt64 startAddress, int bytesPerIndex, UInt64 length);
         /**
          * allow reading an array from memory
          * formats the raw memory structure to fit into the number system of a UInt64
          */
         public abstract void WriteArrayToMem(UInt64 startAddress, UInt64[] value, int bytesPerIndex);
+    }
+    public class InstructionLoader: AssemblyLoadContext
+    {
+        public InstructionLoader() : base(isCollectible: true) { }
+        protected override Assembly Load(AssemblyName assemblyName)
+        {
+            return null!; // fallback to default load context
+        }
+        public static bool PickNewInstructionSet(Type targetType, ref List<Type> loadedInstruction)
+        {
+            loadedInstruction ??= [];
+            List<Type> pluginTypes = FindInstructions(targetType, loadedInstruction);
+
+            Console.WriteLine($"Found {pluginTypes.Count} instruction sets:");
+            Console.WriteLine($"{0}: exit picker");
+            for (int index = 0; index < pluginTypes.Count; index++)
+            {
+                var type = pluginTypes[index];
+                Console.WriteLine($"{index + 1}: {type.Namespace} -> {type.Name}");
+            }
+            
+            int pickedIndex = FindUserPick(pluginTypes);
+            if (pickedIndex == -1)
+            {
+                Console.WriteLine("No instruction set loaded.");
+                return false;
+            }
+
+            loadedInstruction.Add(pluginTypes[pickedIndex - 1]);
+            Console.WriteLine($"Loaded instruction set: {pluginTypes[pickedIndex - 1].Namespace} -> {pluginTypes[pickedIndex - 1].Name}");
+            return true;
+        }
+        public static int FindUserPick(List<Type> pluginTypes, int maxAttempts = 10)
+        {
+            int pickedIndex = -1;
+            for (int i = 0; i < maxAttempts; i++)
+            {
+                Console.WriteLine("Enter the number of an instruction to load:");
+                Console.Write("> ");
+                String? input = Console.ReadLine();
+                if (input == null)
+                {
+                    Console.WriteLine("No input provided!");
+                    continue;
+                }
+                if (int.TryParse(input, out pickedIndex))
+                {
+                    if (pickedIndex == 0)
+                    {
+                        Console.WriteLine("Exiting picker.");
+                        return -1;
+                    }
+                    if (pickedIndex < 1 || pickedIndex > pluginTypes.Count)
+                    {
+                        Console.WriteLine("Invalid number, please try again.");
+                        pickedIndex = -1;
+                        continue;
+                    }
+                    break;
+                }
+                else
+                {
+                    pickedIndex = -1;
+                }
+                for (int index = 0; index < pluginTypes.Count; index++)
+                {
+                    if (String.Equals(pluginTypes[i].Name, input))
+                    {
+                        pickedIndex = index;
+                        break;
+                    }
+                }
+                for (int index = 0; index < pluginTypes.Count; index++)
+                {
+                    if (String.Equals(pluginTypes[i].Namespace, input))
+                    {
+                        pickedIndex = index;
+                        break;
+                    }
+                }
+            }
+            return pickedIndex;
+        }
+        public static List<Type> FindInstructions(Type targetType, List<Type> exclusion)
+        {
+            string exeDir = AppContext.BaseDirectory;
+            string[] dllFiles = Directory.GetFiles(exeDir, "*.dll");
+
+            List<Type> pluginTypes = new();
+
+            foreach (var dll in dllFiles)
+            {
+                Assembly assembly = Assembly.LoadFrom(dll);
+
+                var types = assembly.GetTypes();
+                foreach (Type t in types)
+                {
+                    if (t == null || !targetType.IsAssignableFrom(t) || t.IsAbstract)
+                        continue;
+                    for (int i = 0; i < exclusion.Count; i++)
+                    {
+                        if (exclusion[i].GetType() == t)
+                        {
+                            continue;
+                        }
+                    }
+                    pluginTypes.Add(t);
+                }
+            }
+            return pluginTypes;
+        }
     }
 }
