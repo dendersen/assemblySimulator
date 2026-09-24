@@ -354,7 +354,7 @@ namespace assemblySimulator
                 }
                 for (int index = 0; index < pluginTypes.Count; index++)
                 {
-                    if (String.Equals(pluginTypes[i].Name, input))
+                    if (String.Equals(pluginTypes[index].Name, input))
                     {
                         pickedIndex = index;
                         break;
@@ -377,7 +377,10 @@ namespace assemblySimulator
             string[] dllFiles = Directory.GetFiles(exeDir, "*.dll");
 
             List<Type> pluginTypes = new();
-
+            for (int i = 0; i < exclusion.Count; i++)
+            {
+                Console.WriteLine($"Excluded instruction: {{{i}}}", exclusion[i].Name);
+            }
             foreach (var dll in dllFiles)
             {
                 Assembly assembly = Assembly.LoadFrom(dll);
@@ -387,12 +390,10 @@ namespace assemblySimulator
                 {
                     if (t == null || !targetType.IsAssignableFrom(t) || t.IsAbstract)
                         continue;
-                    for (int i = 0; i < exclusion.Count; i++)
+                    
+                    if (exclusion.Contains(t))
                     {
-                        if (exclusion[i].GetType() == t)
-                        {
-                            continue;
-                        }
+                        continue;
                     }
                     pluginTypes.Add(t);
                 }

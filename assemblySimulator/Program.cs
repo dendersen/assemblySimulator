@@ -11,6 +11,7 @@ public class MainClass
         {
             Console.WriteLine($"Loaded instruction: {{{i}}}", loadedInstruction[i].Name);
         }
+        InstructionLoader.PickNewInstructionSet(typeof(InstructionSet), ref loadedInstruction);
         //TestMem(8, 100_000);
     }
     public static UInt64 mask(int bitCnt)
