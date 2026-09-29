@@ -45,7 +45,7 @@ namespace assemblySimulator
         {
             if (this.canWrite)
             {
-                this.value = value & (UInt64)((Int64)(-1) >> (64 - this.length));
+                this.value = value & (UInt64.MaxValue >> (64 - this.length));
             }
         }
     }
@@ -61,7 +61,6 @@ namespace assemblySimulator
                 this.registers[i] = new(registerLength);
             }
         }
-
         public RegisterBlock(ushort[] registerLength)
         {
             this.registers = new Reg[registerLength.Length];
@@ -76,6 +75,30 @@ namespace assemblySimulator
             for (int i = 0; i <= registerLength.Length; i++)
             {
                 this.registers[i] = new(registerLength[i], writeable.Length >= i || writeable[i], initialValue.Length < i ? initialValue[i] : 0);
+            }
+        }
+        public RegisterBlock(short registerCount, ushort registerLength, UInt64[] initialValue)
+        {
+            this.registers = new Reg[registerCount];
+            for (int i = 0; i < registerCount; i++)
+            {
+                this.registers[i] = new(registerLength, initialValue.Length < i ? initialValue[i] : 0);
+            }
+        }
+        public RegisterBlock(short registerCount, ushort[] registerLength, UInt64[] initialValue)
+        {
+            this.registers = new Reg[registerCount];
+            for (int i = 0; i < registerCount; i++)
+            {
+                this.registers[i] = new(registerLength[Math.Min(i, registerLength.Length - 1)], initialValue.Length < i ? initialValue[i] : 0);
+            }
+        }
+        public RegisterBlock(short registerCount, ushort registerLength)
+        {
+            this.registers = new Reg[registerCount];
+            for (int i = 0; i < registerCount; i++)
+            {
+                this.registers[i] = new(registerLength, 0);
             }
         }
         public void SetDebugger(DebugManager debuger)

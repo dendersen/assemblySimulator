@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)\assemblySimulator\bin\$(Configuration)\net10.0\&quot;&#xD;&#xA;" />
+    <Exec Command="copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)\assemblySimulator\bin\$(Configuration)\net10.0-windows\&quot;&#xD;&#xA;" />
   </Target>
 
 </Project>

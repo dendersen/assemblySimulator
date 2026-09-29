@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Diagnostics;
 
 namespace assemblySimulator
 {
@@ -159,12 +160,21 @@ namespace assemblySimulator
                 FindTarget(address);
                 UInt64 output = MemBlocks.Read(address);
                 this.UnlockMem();
+                if (output >= (1ul << (bytesPerAddress * 8)) && bytesPerAddress != 8)
+                {
+                    throw new Exception("Memory module read value exceeds maximum value for bytes per address");
+                }
                 return output;
             }
             return 0;
         }
         public void Write(UInt64 address, UInt64 value)
         {
+            Debug.WriteLine($"Writing {value:X4} to address {address:X4}");
+            if (value >= (1ul << (bytesPerAddress * 8)) && bytesPerAddress != 8)
+            {
+                throw new Exception("Memory module write value exceeds maximum value for bytes per address");
+            }
             if (this.LockMem(address))
             {
                 FindTarget(address);
@@ -190,6 +200,31 @@ namespace assemblySimulator
                     throw new Exception("Address out of range");
                 }
                 MemBlocks = MemBlocks.prevBlock;
+            }
+        }
+        public void FillMem(byte[] data)
+        {
+            if ((UInt64)data.Length > MemBlocks.addressCount * (UInt64)bytesPerAddress)
+            {
+                throw new Exception("Data too large to fit in memory");
+            }
+            for (UInt64 i = 0; i < (UInt64)data.Length; i += (UInt64)bytesPerAddress)
+            {
+                UInt64 value = 0;
+                for (short j = 0; j < bytesPerAddress; j++)
+                {
+                    if (i + (UInt64)j >= (UInt64)data.Length)
+                    {
+                        break;
+                    }
+                    if (value >= (1ul << (bytesPerAddress * 8)) && bytesPerAddress != 8)
+                    {
+                        throw new Exception("Memory module write value exceeds maximum value for bytes per address");
+                    }
+                    value <<= j * 8;
+                    value |= (UInt64)data[i + (UInt64)j];
+                }
+                Write(i / (UInt64)bytesPerAddress, value);
             }
         }
     }

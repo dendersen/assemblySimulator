@@ -3,6 +3,8 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.AccessControl;
+using System.Diagnostics;
+
 namespace LC3
 {
 
@@ -37,9 +39,9 @@ namespace LC3
             set => bits = value ? (UInt16)(bits | (1 << 15)) : (UInt16)(bits & ~(1 << 15));
         }
     }
-    internal class LC3Executer(RegisterBlock regs, OsHandler os, Mem mem, DebugManager? debug, LC3InstructionSet instruct)
+    internal class LC3Executer(OsHandler os, Mem mem, DebugManager? debug, LC3InstructionSet instruct)
     {
-        internal RegisterBlock regs = regs;
+        internal RegisterBlock regs = new(8, 16);
         internal OsHandler os = os;
         internal Mem mem = mem;
         internal DebugManager? debug = debug;
@@ -447,7 +449,8 @@ namespace LC3
                     }
                     else
                     {
-                        throw new NotImplementedException("halt trap called, but no debugger is attached");
+                        Debug.WriteLine("halt trap called, but no debugger is attached");
+                        System.Environment.Exit(0);
                     }
                     break;
                 default:
@@ -456,19 +459,18 @@ namespace LC3
         }
     }
 
-        public class LC3InstructionSet : InstructionSet
+    public class LC3InstructionSet : InstructionSet
     {
         internal UInt64 PC = 0;
-        public static readonly new short memBytesPerAddress = 16;
-        public static readonly new UInt64 regCount = 8;
-        public static readonly new UInt64[]? regValues = null;
-        public static readonly new bool[]? regWritable = null;
+        public static readonly new short memBytesPerAddress = 2;
         internal LC3Executer executer;
-        public LC3InstructionSet(ref Mem memTarget, ref RegisterBlock regTarget, OsHandler os) : base(ref memTarget, ref regTarget, os) {
-            executer = new LC3Executer(regTarget, os, memTarget, debug, this);
+        public LC3InstructionSet(ref Mem memTarget, OsHandler os) : base(ref memTarget, os) {
+            executer = new LC3Executer(os, memTarget, debug, this);
         }
         public override void ExecuteInstruction(ulong instruction)
         {
+            Debug.WriteLine($"Executing instruction: 0x{instruction:X4}");
+            Debug.WriteLine($"Executing opcode: 0b{GetOpcode(instruction):B4}");
             executer.Handle(instruction);
         }
         public override ulong GetOpcode(ulong instruction)

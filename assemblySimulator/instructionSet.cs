@@ -1,11 +1,15 @@
 ﻿using assemblySimulator;
+using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Text;
+using System.IO;
+using System.Diagnostics;
 
 namespace assemblySimulator
 {
@@ -13,20 +17,28 @@ namespace assemblySimulator
     {
         private TextReader stdIn;
         private TextWriter stdOut;
-        private bool isStdOutTerminal;
+        private readonly bool isStdOutTerminal;
         private TextWriter[] altOut;
         internal Mem mem;
         private byte memMode = 0;
-        private InstructionSet? instructionSet;
-        public OsHandler(Mem mem,TextReader? stdIn, TextWriter? stdOut)
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool AllocConsole();
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GetStdHandle(int nStdHandle);
+        private const int STD_OUTPUT_HANDLE = -11;
+        public static StreamWriter OpenNewConsole()
         {
-            this.mem = mem;
-            this.stdIn = stdIn ?? Console.In;
-            this.stdOut = stdOut ?? Console.Out;
-            this.isStdOutTerminal = stdOut == null;
-            this.altOut = [];
+            if (AllocConsole())
+            {
+                IntPtr stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+                SafeFileHandle safeHandle = new SafeFileHandle(stdHandle, ownsHandle: false);
+                FileStream fileStream = new FileStream(safeHandle, FileAccess.Write);
+                return new StreamWriter(fileStream) { AutoFlush = true };
+            }
+            throw new InvalidOperationException("Failed to allocate console.");
         }
-        public OsHandler(Mem mem, TextReader? stdIn, TextWriter[] stdOut)
+        public OsHandler(Mem mem, TextReader? stdIn, TextWriter[]? stdOut)
         {
             this.mem = mem;
             this.stdIn = stdIn ?? Console.In;
@@ -65,10 +77,6 @@ namespace assemblySimulator
         public void SetMemMode(byte memMode)
         {
             this.memMode = memMode;
-        }
-        public void SetInstructionSet(InstructionSet instructionSet)
-        {
-            this.instructionSet = instructionSet;
         }
         /**
          * write a number of bytes from memory into the console
@@ -240,17 +248,17 @@ namespace assemblySimulator
     abstract public class InstructionSet
     {
         protected Mem memTarget;
-        protected RegisterBlock regTarget;
         protected OsHandler os;
         protected DebugManager? debug;
         public static readonly short memBytesPerAddress = 0;
-        public static readonly UInt64? regCount = null;
-        public static readonly UInt64[]? regValues = null;
-        public static readonly bool[]? regWritable = null;
-        public InstructionSet(ref Mem memTarget, ref RegisterBlock regTarget, OsHandler os)
+        /**
+         * the instruction set needs to know which memory to read from and write to
+         * it also needs to know which os handler to use for console input and output
+         * the implimentation does not set the register block, it is up to the implimentation to set the register block to the correct one
+         */
+        public InstructionSet(ref Mem memTarget, OsHandler os)
         {
             this.memTarget = memTarget;
-            this.regTarget = regTarget;
             this.os = os;
         }
         public abstract void JumpOverride(UInt64 address);
@@ -325,10 +333,11 @@ namespace assemblySimulator
             int pickedIndex = -1;
             for (int i = 0; i < maxAttempts; i++)
             {
-                Console.WriteLine("Enter the number of an instruction to load:");
+                Debug.WriteLine($"performing attempt: {i}/{maxAttempts}");
+                Debug.WriteLine("Enter the number of an instruction to load:");
                 Console.Write("> ");
                 String? input = Console.ReadLine();
-                if (input == null)
+                if (string.IsNullOrWhiteSpace(input))
                 {
                     Console.WriteLine("No input provided!");
                     continue;
@@ -346,56 +355,85 @@ namespace assemblySimulator
                         pickedIndex = -1;
                         continue;
                     }
+                    Debug.WriteLine($"Valid number found! {pickedIndex}");
                     break;
                 }
                 else
                 {
+                    Debug.WriteLine($"input: {input} could not be parsed as integer");
                     pickedIndex = -1;
                 }
+
                 for (int index = 0; index < pluginTypes.Count; index++)
                 {
-                    if (String.Equals(pluginTypes[index].Name, input))
+                    if (string.Equals(pluginTypes[index].Name, input, StringComparison.OrdinalIgnoreCase))
                     {
-                        pickedIndex = index;
-                        break;
+                        return index + 1;
                     }
                 }
-                for (int index = 0; index < pluginTypes.Count; index++)
-                {
-                    if (String.Equals(pluginTypes[i].Namespace, input))
-                    {
-                        pickedIndex = index;
-                        break;
-                    }
-                }
+                Debug.WriteLine($"did not find any instruction set matching: {input}");
             }
             return pickedIndex;
         }
         public static List<Type> FindInstructions(Type targetType, List<Type> exclusion)
         {
             string exeDir = AppContext.BaseDirectory;
+            Debug.WriteLine($"Searching for instruction sets in: {exeDir}");
             string[] dllFiles = Directory.GetFiles(exeDir, "*.dll");
-
-            List<Type> pluginTypes = new();
+            List<Type> pluginTypes = [];
+            var context = new InstructionLoader();
             for (int i = 0; i < exclusion.Count; i++)
             {
-                Console.WriteLine($"Excluded instruction: {{{i}}}", exclusion[i].Name);
+                Debug.WriteLine($"Excluded instruction: {{{i}}}", exclusion[i].Name);
             }
             foreach (var dll in dllFiles)
             {
-                Assembly assembly = Assembly.LoadFrom(dll);
-
-                var types = assembly.GetTypes();
-                foreach (Type t in types)
+                try
                 {
-                    if (t == null || !targetType.IsAssignableFrom(t) || t.IsAbstract)
-                        continue;
-                    
-                    if (exclusion.Contains(t))
+                    Assembly assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(dll);
+                    Type[] types;
+                    try
                     {
-                        continue;
+                        Debug.WriteLine($"Loading types from assembly: {dll}");
+                        types = assembly.GetTypes();
                     }
-                    pluginTypes.Add(t);
+                    catch (ReflectionTypeLoadException ex)
+                    {
+                        Debug.WriteLine($"Warning: something went wrong while loading types from {dll}, {ex.Message}");
+                        types = ex.Types!;
+                    }
+                    foreach (Type t in types)
+                    {
+                        if (t == null) {
+                            Debug.WriteLine($"ignoring null type");
+                            continue;
+                        }
+                        if (!targetType.IsAssignableFrom(t))
+                        {
+                            Debug.WriteLine($"ignoring class: {t.Name} as it does not extend {targetType.Name}");
+                            continue;
+                        }
+                        if (t.IsAbstract)
+                        {
+                            Debug.WriteLine($"ignoring class: {t.Name} as it is abstract");
+                            continue;
+                        }
+                        if (exclusion.Contains(t))
+                        {
+                            Debug.WriteLine($"exluding class: {t.Name}");
+                            continue;
+                        }
+
+                        pluginTypes.Add(t);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error loading assembly {dll}: {ex.Message}");
+                }
+                finally
+                {
+                    Debug.WriteLine($"handled file: {dll}");
                 }
             }
             return pluginTypes;
