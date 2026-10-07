@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="assemblySimulator/assemblySimulator.csproj" />
   <Project Path="LC3/LC3.csproj" Id="ec0b6619-bf7b-417b-a0bf-6df0107c2473" />
+  <Project Path="RISC-V/RISC-V.csproj" Id="366c630b-b95f-4343-ba29-a6f6cd912c15" />
 </Solution>

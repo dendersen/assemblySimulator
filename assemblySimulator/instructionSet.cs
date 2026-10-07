@@ -245,25 +245,16 @@ namespace assemblySimulator
             mem.Write(TargetAdress, memValue);
         }
     }
-    abstract public class InstructionSet
+    abstract public class InstructionSet(ref Mem memTarget, OsHandler os)
     {
-        protected Mem memTarget;
-        protected OsHandler os;
+        protected Mem memTarget = memTarget;
+        protected OsHandler os = os;
         protected DebugManager? debug;
         public static readonly short memBytesPerAddress = 0;
-        /**
-         * the instruction set needs to know which memory to read from and write to
-         * it also needs to know which os handler to use for console input and output
-         * the implimentation does not set the register block, it is up to the implimentation to set the register block to the correct one
-         */
-        public InstructionSet(ref Mem memTarget, OsHandler os)
-        {
-            this.memTarget = memTarget;
-            this.os = os;
-        }
         public abstract void JumpOverride(UInt64 address);
         public abstract void JumpRelative(Int64 offset);
-        public abstract void ExecuteInstruction(UInt64 instruction);
+
+        public abstract void Execute();
         /**
          * tool for allowing other components to recieve the currently used opcode from instruction
          */

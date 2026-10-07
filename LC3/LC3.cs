@@ -464,11 +464,13 @@ namespace LC3
         internal UInt64 PC = 0;
         public static readonly new short memBytesPerAddress = 2;
         internal LC3Executer executer;
-        public LC3InstructionSet(ref Mem memTarget, OsHandler os) : base(ref memTarget, os) {
-            executer = new LC3Executer(os, memTarget, debug, this);
+        public LC3InstructionSet(ref Mem memTarget_, OsHandler os) : base(ref memTarget_, os) {
+            executer = new LC3Executer(os, memTarget_, debug, this);
         }
-        public override void ExecuteInstruction(ulong instruction)
+        public override void Execute()
         {
+            UInt64 instruction = memTarget.Read(GetPC());
+            IncrimentPC();
             Debug.WriteLine($"Executing instruction: 0x{instruction:X4}");
             Debug.WriteLine($"Executing opcode: 0b{GetOpcode(instruction):B4}");
             executer.Handle(instruction);

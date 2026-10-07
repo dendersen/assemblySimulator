@@ -1,7 +1,6 @@
 ﻿using assemblySimulator;
 using System.Diagnostics;
 using System.Reflection;
-using System.Windows.Forms;
 public class MainClass
 {
     [STAThread]
@@ -52,29 +51,20 @@ public class MainClass
         mem.FillMem(ReadBinaryFile(null));
         while (true)
         {
-            UInt64 instruction0 = mem.Read(instruct.GetPC());
-            instruct.IncrimentPC();
-            instruct.ExecuteInstruction(instruction0);
+            instruct.Execute();
         }
     }
     public static byte[] ReadBinaryFile(string? filePath)
     {
-        if (filePath == null)
+        if (!String.IsNullOrEmpty(filePath))
         {
-            var dlg = new OpenFileDialog
-            {
-                Filter = "Binary files(*.bin) | *.bin",
-                Title = "Select a binary file to load into memory"
-            };
-            if (dlg.ShowDialog() != DialogResult.OK)
-            {
-                return [];
-            }
-            filePath = dlg.FileName;
+            return File.ReadAllBytes(filePath);
         }
-        if (!File.Exists(filePath))
+        filePath = FilePicker.ChooseFile("Select a binary file to load into memory");
+        if (String.IsNullOrEmpty(filePath))
         {
-            throw new FileNotFoundException($"The file '{filePath}' does not exist.");
+            Console.Error.WriteLine("No file selected. Exiting.");
+            return [];
         }
         return File.ReadAllBytes(filePath);
     }

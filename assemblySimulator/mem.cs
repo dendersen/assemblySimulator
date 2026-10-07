@@ -17,6 +17,7 @@ namespace assemblySimulator
         private Thread? memUser;
         private int recursiveLockCount = 0;
         private MemBlock MemBlocks;
+        public readonly UInt64 maxAddress;
         private readonly LinkedList<AddressLock> AddressLocks = new();
         
         private class MemBlock
@@ -65,6 +66,7 @@ namespace assemblySimulator
         }
         public Mem(UInt64 maxAddress, short bytesPerAddress, UInt64 blockSize)
         {
+            this.maxAddress = maxAddress;
             this.bytesPerAddress = bytesPerAddress;
             this.memInUse = new Mutex(false);
             if (blockSize == 0)
