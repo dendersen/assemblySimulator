@@ -254,6 +254,7 @@ namespace assemblySimulator
         public abstract void JumpOverride(UInt64 address);
         public abstract void JumpRelative(Int64 offset);
 
+        public abstract void ExecuteInstruction(ulong instruction);
         public abstract void Execute();
         /**
          * tool for allowing other components to recieve the currently used opcode from instruction

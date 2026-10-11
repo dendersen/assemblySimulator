@@ -61,6 +61,15 @@ namespace assemblySimulator
                 this.registers[i] = new(registerLength);
             }
         }
+        public RegisterBlock(int registerCount, ushort registerLength, bool[] writeable)
+        {
+            this.registers = new Reg[registerCount];
+            for (int i = 0; i < registerCount; i++)
+            {
+                bool write = writeable.Length > i ? writeable[i] : true;
+                this.registers[i] = new(registerLength, write, 0);
+            }
+        }
         public RegisterBlock(ushort[] registerLength)
         {
             this.registers = new Reg[registerLength.Length];

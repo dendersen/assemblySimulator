@@ -26,7 +26,7 @@ namespace assemblySimulator
             // Using PowerShell's built-in OpenFileDialog to avoid WinForms dependencies
             var psScript = "[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null; " +
                            "$dialog = New-Object System.Windows.Forms.OpenFileDialog; " +
-                           "$dialog.Filter = 'All Files (*.*)|*.*'; " +
+                           "$dialog.Filter = 'Binary Files (*.bin)|*.bin'; " +
                            "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $dialog.FileName }";
 
             return RunCommand("powershell", $"-NoProfile -Command \"{psScript}\"");
