@@ -11,4 +11,9 @@
     <ProjectReference Include="..\assemblySimulator\assemblySimulator.csproj" />
   </ItemGroup>
 
+  <Target Name="CopyPluginToSimulator" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFolder="$(MSBuildProjectDirectory)/../assemblySimulator/bin/$(Configuration)/net10.0" />
+  </Target>
+
 </Project>

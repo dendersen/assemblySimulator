@@ -501,12 +501,17 @@ namespace RISC_V
         public abstract bool Validate(Instruction inst);
         public abstract void Handle(Instruction inst);
     }
-    public class RiscV_32(ref Mem memTarget_, OsHandler os) : InstructionSet(ref memTarget_, os)
+    public class RiscV_32 : InstructionSet
     {
-        private List<RiscV_32_Extension> extensions = [];
-        internal RegisterBlock regs_shared = new(32, 32,[false]);
+        internal RegisterBlock regs_shared;
+        private List<RiscV_32_Extension> extensions;
         public static new readonly short memBytesPerAddress = 1;
         private UInt32 PC = 0;
+        public RiscV_32(ref Mem memTarget_, OsHandler os) : base(ref memTarget_, os)
+        {
+            regs_shared = new(32, 32,[false]);
+            extensions = [new RV32I(memTarget_, os, regs_shared)];
+        }
         public override void ExecuteInstruction(ulong instruction)
         {
             bool handled = false;
@@ -522,6 +527,8 @@ namespace RISC_V
             }
             if (!handled)
             {
+                Debug.WriteLine($"Instruction not handled: {instruction:X8}");
+                Debug.WriteLine($"Instruction opcode: {inst.opcode:X2}");
                 throw new NotImplementedException("Instruction not in any loaded extension.");
             } 
         }

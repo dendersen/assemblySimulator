@@ -7,12 +7,15 @@ public class MainClass
     public static void Main()
     {
         List<Type> loadedInstruction = [];
-        while(loadedInstruction.Count == 0){
-            InstructionLoader.PickNewInstructionSet(typeof(InstructionSet), ref loadedInstruction);
-            for (int i = 0; i < loadedInstruction.Count; i++)
-            {
-                Debug.WriteLine($"Loaded instruction: {{{i}}}", loadedInstruction[i].Name);
-            }
+        InstructionLoader.PickNewInstructionSet(typeof(InstructionSet), ref loadedInstruction);
+        if (loadedInstruction.Count == 0)
+        {
+            Console.Error.WriteLine("No instruction set loaded. Exiting.");
+            return;
+        }
+        for (int i = 0; i < loadedInstruction.Count; i++)
+        {
+            Debug.WriteLine($"Loaded instruction: {{{i}}}", loadedInstruction[i].Name);
         }
 
         short memBytesPerAddress;
@@ -36,7 +39,51 @@ public class MainClass
 
         Debug.WriteLine($"memBytesPerAddress: {memBytesPerAddress}");
         
-        Mem mem = new((UInt64)0xFFFF, memBytesPerAddress, 1000);
+        bool autoTets = false;
+        UInt64 memLength = 0xFFFF;
+        byte[] memFile;
+        while(true)
+        {
+            string option = Console.ReadLine();
+            if (option == "test")
+            {
+                autoTets = true;
+            }
+            else if (option == "memtest")
+            {
+                TestMem(memBytesPerAddress, 0xFFFF);
+            }
+            else if (option == "setmem")
+            {
+                Console.WriteLine("Enter memory length (in address count):");
+                memLength = UInt64.Parse(Console.ReadLine());
+            }
+            else if (option == "sizeFromFile")
+            {
+                memLength = 0;
+            }
+            else if (option == "q")
+            {
+                break;
+            }
+            else
+            {
+                Console.WriteLine("Unknown option.");
+                Console.WriteLine("Options: test, memtest, setmem, sizeFromFile, q");
+                continue;
+            }
+        }
+        if (autoTets)
+        {
+            RunTest();
+            return;
+        }
+        memFile = ReadBinaryFile(null);
+        if (memFile.Length == 0)
+        {
+            memLength = (UInt64)memFile.Length / (UInt64)memBytesPerAddress + (UInt64)((memFile.Length % memBytesPerAddress == 0) ? 0 : 1);
+        }
+        Mem mem = new(memLength, memBytesPerAddress, 1000);
         OsHandler os = new(mem, null, null);
         InstructionSet instruct;
         {
@@ -46,13 +93,18 @@ public class MainClass
                 Console.Error.WriteLine("Error: Could not create InstructionSet instance.");
                 return;
             }
-            instruct = (InstructionSet)_instruct;
+            instruct = _instruct;
         }
-        mem.FillMem(ReadBinaryFile(null));
+        mem.FillMem(memFile);
         while (true)
         {
             instruct.Execute();
         }
+    }
+    public static void RunTest()
+    {
+        filePath = FilePicker.ChooseFile("Select a binary file to load into memory");
+        // Implementation for running tests
     }
     public static byte[] ReadBinaryFile(string? filePath)
     {

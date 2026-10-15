@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -10,8 +10,9 @@
     <ProjectReference Include="..\assemblySimulator\assemblySimulator.csproj" />
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)\assemblySimulator\bin\$(Configuration)\net10.0\&quot;&#xD;&#xA;" />
+  <Target Name="CopyPluginToSimulator" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFolder="$(MSBuildProjectDirectory)/../assemblySimulator/bin/$(Configuration)/net10.0" />
   </Target>
 
 </Project>

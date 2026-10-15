@@ -7,26 +7,37 @@ namespace assemblySimulator
 {
     public static class FilePicker
     {
-        public static string? ChooseFile(string title = "Select a File")
+        public static string? ChooseFile(string title = "Select a File", bool allowAll = false)
         {
+            string? filePath = null;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                return PickFileWindows();
+                filePath = PickFileWindows(allowAll);
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                return PickFileLinux(title);
+                filePath = PickFileLinux(title);
             }
-
-            throw new PlatformNotSupportedException("Unsupported operating system.");
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                Console.Error.WriteLine("Failed to pick a file.");
+                Console.WriteLine("type '!' to fail gracefully, or enter a file path manually.");
+                while (string.IsNullOrWhiteSpace(filePath))
+                {
+                    Console.WriteLine("File path: ");
+                    filePath = Console.ReadLine();
+                }
+                return String.Equals("!", filePath) ? null : filePath;
+            }
+            return filePath;
         }
 
-        private static string? PickFileWindows()
+        private static string? PickFileWindows(bool allowAll = false)
         {
-            // Using PowerShell's built-in OpenFileDialog to avoid WinForms dependencies
+            // powershell
             var psScript = "[System.Reflection.Assembly]::LoadWithPartialName('System.windows.forms') | Out-Null; " +
                            "$dialog = New-Object System.Windows.Forms.OpenFileDialog; " +
-                           "$dialog.Filter = 'Binary Files (*.bin)|*.bin'; " +
+                           "$dialog.Filter = " + (allowAll ? "'All Files (*.*)|*.*'; " : "'Binary Files (*.bin)|*.bin'; ") +
                            "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $dialog.FileName }";
 
             return RunCommand("powershell", $"-NoProfile -Command \"{psScript}\"");
@@ -34,10 +45,9 @@ namespace assemblySimulator
 
         private static string? PickFileLinux(string title)
         {
-            // Try zenity (GNOME/GTK default)
+            // gnome zenity
             string? result = RunCommand("zenity", $"--file-selection --title=\"{title}\"");
-
-            // Fallback to kdialog (KDE default) if zenity isn't available
+            // kde kdialog
             if (string.IsNullOrWhiteSpace(result))
             {
                 result = RunCommand("kdialog", $"--getopenfilename . --title \"{title}\"");

@@ -1,0 +1,36 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build All and Copy Plugins",
+      "dependsOn": [
+        "dotnet: build main",
+        "dotnet: build LC3",
+        "dotnet: build RISC-V"
+      ],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "dotnet: build main",
+      "type": "shell",
+      "command": "dotnet build ${workspaceFolder}/assemblySimulator/assemblySimulator.csproj --configuration Debug",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "dotnet: build LC3",
+      "type": "shell",
+      "command": "dotnet build ${workspaceFolder}/LC3/LC3.csproj --configuration Debug",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "dotnet: build RISC-V",
+      "type": "shell",
+      "command": "dotnet build ${workspaceFolder}/RISC-V/RISC-V.csproj --configuration Debug",
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}
