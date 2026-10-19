@@ -85,7 +85,7 @@ public class MainClass
         }
         RunArchitecture(loadedInstruction[0], filePath, memBytesPerAddress, memLength);
     }
-    private static void RunArchitecture(Type loadedInstruction, string testFile, short memBytesPerAddress, UInt64 memLength)
+    private static InstructionSet RunArchitecture(Type loadedInstruction, string testFile, short memBytesPerAddress, UInt64 memLength, bool printDump = true)
     {
         byte[] memFile;
         memFile = ReadBinaryFile(testFile);
@@ -101,20 +101,24 @@ public class MainClass
             if (_instruct == null)
             {
                 Console.Error.WriteLine("Error: Could not create InstructionSet instance.");
-                return;
+                return null;
             }
             instruct = _instruct;
         }
         mem.FillMem(memFile);
         while (true)
         {
-            if (!instruct.Execute())
+            if (instruct.Execute())
             {
                 Console.WriteLine("Execution halted.");
-                instruct.Dump();
+                if (printDump)
+                {
+                    instruct.Dump();
+                }
                 break;
             }
         }
+        return instruct;
     }
     public static void RunTest(Type InstructionSet, short memBytesPerAddress)
     {
@@ -125,9 +129,25 @@ public class MainClass
             foreach (String test in Directory.GetFiles("tests/" + testGroup, "*.bin"))
             {
                 Console.WriteLine("Running test: " + test);
-                RunArchitecture(InstructionSet, test, memBytesPerAddress, 0);
-                Console.WriteLine("Test completed, press Enter to continue.");
-                Console.ReadLine();
+                InstructionSet instruct = RunArchitecture(InstructionSet, test, memBytesPerAddress, 0, false);
+                byte[] regDump = instruct.RegDump();
+                byte[] regTarget = ReadBinaryFile(test.Replace(".bin",".res"));
+                if (regDump.Length != regTarget.Length || !regDump.SequenceEqual(regTarget))
+                {
+                    Console.WriteLine("Test failed: " + test);
+                }
+                else
+                {
+                    Console.WriteLine("Test passed: " + test);
+                }
+                Console.WriteLine("type 'y' to print dump");
+                string? response = Console.ReadLine();
+                if (response?.ToLower() == "y")
+                {
+                    instruct.Dump();
+                    Console.WriteLine("press enter to continue...");
+                    Console.ReadLine();
+                }
             }
         }
     }

@@ -467,17 +467,18 @@ namespace LC3
         public LC3InstructionSet(ref Mem memTarget_, OsHandler os) : base(ref memTarget_, os) {
             executer = new LC3Executer(os, memTarget_, debug, this);
         }
-        public override void ExecuteInstruction(ulong instruction)
+        public override bool ExecuteInstruction(ulong instruction)
         {
             Debug.WriteLine($"Executing instruction: 0x{instruction:X4}");
             Debug.WriteLine($"Executing opcode: 0b{GetOpcode(instruction):B4}");
             executer.Handle(instruction);
+            return false;
         }
-        public override void Execute()
+        public override bool Execute()
         {
             UInt64 instruction = memTarget.Read(GetPC());
             IncrimentPC();
-            ExecuteInstruction(instruction);
+            return ExecuteInstruction(instruction);
         }
         public override ulong GetOpcode(ulong instruction)
         {

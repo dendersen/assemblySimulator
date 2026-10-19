@@ -129,7 +129,7 @@ namespace assemblySimulator
          * quitOnFull swaps from quiting when a null byte is reached to quitting when a null address is reached
          * meaning it quits when the all memory in one address is 0, instead of when the read byte in an address is 0
          */
-        public void WriteStringConsole(UInt64 startingAddress, int spacing, bool quitOnFull)
+        public void WriteStringConsole(UInt64 startingAddress, int spacing = 1, bool quitOnFull = false)
         {
             UInt64 address = startingAddress;
             int byteOffset = 0;
@@ -168,6 +168,15 @@ namespace assemblySimulator
             foreach (TextWriter writer in this.altOut)
             {
                 writer.Write(outputChar);
+            }
+        }
+        public void WriteStringConsole(String str)
+        {
+            Debug.WriteLine($"OS: write called with direct String! Memory calles prefered.");
+            stdOut.Write(str);
+            foreach (TextWriter writer in this.altOut)
+            {
+                writer.Write(str);
             }
         }
         private readonly string clearText = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n><\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/><\nconsole has been cleared\n><\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/><\n\n";
@@ -290,7 +299,11 @@ namespace assemblySimulator
         public abstract void WriteArrayToMem(UInt64 startAddress, UInt64[] value, int bytesPerIndex);
         public virtual void Dump()
         {
-            Console.WriteLine($"PC: {GetPC():X8}");
+            Debug.WriteLine($"PC: 0x{GetPC():X8}");
+        }
+        public virtual byte[] RegDump()
+        {
+            return Array.Empty<byte>();
         }
     }
     public class InstructionLoader: AssemblyLoadContext

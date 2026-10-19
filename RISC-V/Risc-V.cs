@@ -9,8 +9,10 @@ namespace RISC_V
     public class Instruction(UInt32 bits)
     {
         public UInt32 bits = bits;
-        protected UInt32 mask(int bitCount)
+        internal UInt32 mask(int bitCount)
         {
+            if (bitCount >= 32)
+                return ~(UInt32)0;
             return (1u << bitCount) - 1;
         }
         public UInt32 ReadBits(UInt32 bits, int start, int end)
@@ -20,19 +22,19 @@ namespace RISC_V
         public ushort opcode => (ushort)ReadBits(bits,  0, 6);
         public void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction: bits={bits:X8}, opcode={opcode:X2}");
+            Debug.WriteLine($"Instruction: bits=0x{bits:X8}, opcode=0x{opcode:X2}");
         }
         public UInt32 ZEXT(UInt32 value, int bitCount)
         {
             int shift = 32 - bitCount;
             return (UInt32)(((Int32)(value << shift)) >> shift);
         }
-        public UInt32 SEXT(UInt32 value, int bitCount)
+        public Int32 SEXT(UInt32 value, int bitCount)
         {
             if ((value & (1u << (bitCount - 1))) == 0)
-                return value & mask(bitCount);
-            UInt32 sign = mask(32 - bitCount) << bitCount;
-            return (value & mask(bitCount)) | sign;
+                return (Int32)(value & mask(bitCount));
+            Int32 sign = (Int32)mask(32 - bitCount) << bitCount;
+            return (Int32)(value & mask(bitCount)) | sign;
         }
     }
     public class Instruction_R(Instruction inst) : Instruction(inst.bits)
@@ -44,7 +46,11 @@ namespace RISC_V
         public ushort funct7 => (ushort)ReadBits(bits, 25, 31);
         public new void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction_R: rd={rd:X1}, funct3={funct3:X1}, rs1={rs1:X1}, rs2={rs2:X1}, funct7={funct7:X2}");
+            Debug.WriteLine($"Instruction_R: rd=0x{rd:X1}, funct3=0x{funct3:X1}, rs1=0x{rs1:X1}, rs2=0x{rs2:X1}, funct7=0x{funct7:X2}");
+        }
+        public void DEBUG_PRINT(string instructionName)
+        {
+            Debug.WriteLine($"called instruction: {instructionName}, X{rd}, X{rs1}, X{rs2}");
         }
     }
     public class Instruction_I(Instruction inst) : Instruction(inst.bits)
@@ -52,59 +58,88 @@ namespace RISC_V
         public ushort rd => (ushort)ReadBits(bits, 7, 11);
         public ushort funct3 => (ushort)ReadBits(bits, 12, 14);
         public ushort rs1 => (ushort)ReadBits(bits, 15, 19);
-        public ushort imm => (ushort)ReadBits(bits, 20, 31);
-        public long simm => SEXT(imm, 12);
-        public ulong zimm => ZEXT(imm, 12);
+        protected ushort imm => (ushort)ReadBits(bits, 20, 31);
+        public Int32 simm => SEXT(imm, 12);
+        public UInt32 zimm => ZEXT(imm, 12);
         public new void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction_I: rd={rd:X1}, funct3={funct3:X1}, rs1={rs1:X1}, imm={imm:X4}");
+            Debug.WriteLine($"Instruction_I: rd=0x{rd:X1}, funct3=0x{funct3:X1}, rs1=0x{rs1:X1}, imm=0x{imm:X4}");
+        }
+        public void DEBUG_PRINT(string instructionName, bool signedImm = true)
+        {
+            Debug.WriteLine($"called instruction: {instructionName}, X{rd}, X{rs1}, {(signedImm ? simm : zimm)}");
         }
     }
     public class Instruction_S(Instruction inst) : Instruction(inst.bits)
     {
-        public ushort imm => (ushort)((ReadBits(bits,  7, 11) << 0) | 
+        protected ushort imm => (ushort)((ReadBits(bits,  7, 11) << 0) | 
                                       (ReadBits(bits, 25, 31) << 5));
+        public Int32 simm => SEXT(imm, 12);
+        public UInt32 zimm => ZEXT(imm, 12);
+        public ushort rd => (ushort)ReadBits(bits, 7, 11); //PART OF imm
         public ushort funct3 => (ushort)ReadBits(bits, 12, 14);
         public ushort rs1 => (ushort)ReadBits(bits, 15, 19);
         public ushort rs2 => (ushort)ReadBits(bits, 20, 24);
         public new void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction_S: rs1={rs1:X1}, funct3={funct3:X1}, rs2={rs2:X1}, funct3={funct3:X1}, imm={imm:X4}");
+            Debug.WriteLine($"Instruction_S: rs1=0x{rs1:X1}, funct3=0x{funct3:X1}, rs2=0x{rs2:X1}, funct3=0x{funct3:X1}, imm=0x{imm:X4}");
+        }
+        public void DEBUG_PRINT(string instructionName, bool signedImm = true)
+        {
+            Debug.WriteLine($"called instruction: {instructionName}, X{rs2}, {(signedImm ? simm : zimm)}({rs1})");
         }
     }
     public class Instruction_B(Instruction inst) : Instruction(inst.bits)
     {
-        public ushort imm => (ushort)((ReadBits(bits,  7,  7) << 11) |
+        protected ushort imm => (ushort)((ReadBits(bits,  7,  7) << 11) |
                                       (ReadBits(bits,  8, 11) <<  1) |
-                                      (ReadBits(bits, 12, 14) <<  5) |
-                                      (ReadBits(bits, 31, 31) <<  12));
+                                      (ReadBits(bits, 25, 30) <<  5) |
+                                      (ReadBits(bits, 31, 31) << 12));
+        public Int32 simm => SEXT(imm, 13);
+        public UInt32 zimm => ZEXT(imm, 13);
         public ushort funct3 => (ushort)ReadBits(bits, 12, 14);
         public ushort rs1 => (ushort)ReadBits(bits, 15, 19);
         public ushort rs2 => (ushort)ReadBits(bits, 20, 24);
         public new void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction_B: rs1={rs1:X1}, funct3={funct3:X1}, rs2={rs2:X1}, imm={imm:X4}");
+            Debug.WriteLine($"Instruction_B: rs1=0x{rs1:X1}, funct3=0x{funct3:X1}, rs2=0x{rs2:X1}, imm=0x{imm:X4}");
+        }
+        public void DEBUG_PRINT(string instructionName, bool signedImm = true)
+        {
+            Debug.WriteLine($"called instruction: {instructionName}, X{rs1}, X{rs2}, {(signedImm ? simm : zimm)}");
         }
     }
     public class Instruction_U(Instruction inst) : Instruction(inst.bits)
     {
         public ushort rd => (ushort)ReadBits(bits, 7, 11);
-        public ushort imm => (ushort)((ReadBits(bits, 12, 19) << 12) |
-                                      (ReadBits(bits, 20, 20) << 11) |
-                                      (ReadBits(bits, 21, 30) << 1) |
-                                      (ReadBits(bits, 31, 31) << 20));
+        protected UInt32 imm => (UInt32)(ReadBits(bits, 12, 31) << 12);
+        public Int32 simm => (Int32)imm;
+        public UInt32 zimm => imm;
         public new void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction_U: rd={rd:X1}, imm={imm:X4}");
+            Debug.WriteLine($"Instruction_U: rd=0x{rd:X1}, imm=0x{imm:X8}");
+        }
+        public void DEBUG_PRINT(string instructionName, bool signedImm = true)
+        {
+            Debug.WriteLine($"called instruction: {instructionName}, X{rd}, {(signedImm ? simm : zimm)}");
         }
     }
     public class Instruction_J(Instruction inst) : Instruction(inst.bits)
     {
         public ushort rd => (ushort)ReadBits(bits, 7, 11);
-        public ushort imm => (ushort)(ReadBits(bits, 12, 31) << 12);
+        protected ushort imm => (ushort)(ReadBits(bits, 12, 19) << 12 |
+                                      ReadBits(bits, 20, 20) << 11 |
+                                      ReadBits(bits, 21, 30) <<  1 |
+                                      ReadBits(bits, 31, 31) << 20);
+        public Int32 simm => (Int32)imm;
+        public UInt32 zimm => imm;
         public new void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction_J: rd={rd:X1}, imm={imm:X4}");
+            Debug.WriteLine($"Instruction_J: rd=0x{rd:X1}, imm=0x{imm:X4}");
+        }
+        public void DEBUG_PRINT(string instructionName, bool signedImm = true)
+        {
+            Debug.WriteLine($"called instruction: {instructionName}, X{rd}, {(signedImm ? simm : zimm)}");
         }
     }
     public class RV32I(Mem memTarget, OsHandler os, RegisterBlock regs, RiscV_32 instructionSet) : RiscV_32_Extension(memTarget, os, regs, instructionSet)
@@ -179,9 +214,9 @@ namespace RISC_V
             switch (inst.opcode)
             {
                 case 0b0110111: // LUI
-                    LUI(inst_J); return;
+                    LUI(inst_U); return;
                 case 0b0010111: // AUIPC
-                    AUIPC(inst_J); return;
+                    AUIPC(inst_U); return;
                 case 0b0010011: //addi - slti - sltiu - xori - ori - andi - slli - srli - srai
                     switch (inst_I.funct3)
                     {
@@ -262,13 +297,13 @@ namespace RISC_V
                             throw new NotImplementedException("Instruction not implemented.");
                     }
                 case 0b0000011: //lb - lh - lw - lbu - lhu
-                    LOAD(inst_R); return;
+                    LOAD(inst_I); return;
                 case 0b0100011: //sb - sh - sw
-                    STORE(inst_R); return;
+                    STORE(inst_S); return;
                 case 0b1101111: //jal
-                    JAL(inst_U); return;
+                    JAL(inst_J); return;
                 case 0b1100111: //jalr
-                    JALR(inst_S); return;
+                    JALR(inst_I); return;
                 case 0b1100011: //beq - bne - blt - bge - bltu - bgeu
                     switch (inst_B.funct3)
                     {
@@ -289,136 +324,139 @@ namespace RISC_V
                     }
             }
         }
-        private void LUI(Instruction_J inst)
+        private void LUI(Instruction_U inst)
         {
-            Debug.WriteLine($"instruction called: LUI");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, inst.imm);
+            inst.DEBUG_PRINT("LUI");
+            regs_shared.Write(inst.rd, inst.zimm);
         }
-        private void AUIPC(Instruction_J inst)
+        private void AUIPC(Instruction_U inst)
         {
-            Debug.WriteLine($"instruction called: AUIPC");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, instructionSet.GetPC() + inst.imm);
+            inst.DEBUG_PRINT("AUIPC");
+            regs_shared.Write(inst.rd, instructionSet.GetPC() + inst.zimm);
         }
         private void ADDI(Instruction_I inst)
         {
-            Debug.WriteLine($"instruction called: ADDI");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, regs.Read(inst.rs1) + (ulong)inst.simm);
+            inst.DEBUG_PRINT("ADDI",true);
+            regs_shared.Write(inst.rd, (UInt32)((Int32)regs_shared.Read(inst.rs1) + (Int32)inst.simm));
         }
         private void SLTI(Instruction_I inst)
         {
-            Debug.WriteLine($"instruction called: SLTI");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, (regs.Read(inst.rs1) < (ulong)inst.simm) ? 1ul : 0ul);
+            inst.DEBUG_PRINT("SLTI",true);
+            regs_shared.Write(inst.rd, ((Int32)regs_shared.Read(inst.rs1) < (Int32)inst.simm) ? 1ul : 0ul);
         }
         private void SLTIU(Instruction_I inst)
         {
-            Debug.WriteLine($"instruction called: SLTIU");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, ((long)regs.Read(inst.rs1) < inst.simm) ? 1ul : 0ul);
+            inst.DEBUG_PRINT("SLTIU",true);
+            regs_shared.Write(inst.rd, ((UInt32)regs_shared.Read(inst.rs1) < (UInt32)inst.zimm) ? 1ul : 0ul);
         }
         private void XORI(Instruction_I inst)
         {
-            Debug.WriteLine($"instruction called: XORI");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, regs.Read(inst.rs1) ^ (ulong)inst.simm);
+            inst.DEBUG_PRINT("XORI",true);
+            regs_shared.Write(inst.rd, regs_shared.Read(inst.rs1) ^ (UInt32)inst.simm);
         }
         private void ORI(Instruction_I inst)
         {
-            Debug.WriteLine($"instruction called: ORI");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, regs.Read(inst.rs1) | (ulong)inst.simm);
+            inst.DEBUG_PRINT("ORI",true);
+            regs_shared.Write(inst.rd, (UInt32)regs_shared.Read(inst.rs1) | (UInt32)inst.simm);
         }
         private void ANDI(Instruction_I inst)
         {
-            Debug.WriteLine($"instruction called: ANDI");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, regs.Read(inst.rs1) & (ulong)inst.simm);
+            inst.DEBUG_PRINT("ANDI",true);
+            regs_shared.Write(inst.rd, (UInt32)regs_shared.Read(inst.rs1) & (UInt32)inst.simm);
         }
         private void SLLI(Instruction_I inst)
         {
-            Debug.WriteLine($"instruction called: SLLI");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, regs.Read(inst.rs1) << inst.imm);
+            inst.DEBUG_PRINT("SLLI");
+            regs_shared.Write(inst.rd, (UInt32)regs_shared.Read(inst.rs1) << (int)inst.zimm);
         }
         private void SRLI(Instruction_I inst)
         {
-            Debug.WriteLine($"instruction called: SRLI");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd,regs.Read(inst.rs1) >> inst.imm);
+            inst.DEBUG_PRINT("SRLI");
+            regs_shared.Write(inst.rd,(UInt32)regs_shared.Read(inst.rs1) >> (int)inst.zimm);
         }
         private void SRAI(Instruction_I inst)
         {
-            Debug.WriteLine($"instruction called: SRAI");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, inst.SEXT(((UInt32)regs.Read(inst.rs1)) >> inst.imm, 32 - inst.imm));
+            inst.DEBUG_PRINT("SRAI");
+            regs_shared.Write(inst.rd, (UInt32)inst.SEXT(((UInt32)regs_shared.Read(inst.rs1)) >> (int)inst.zimm, 32 - (int)inst.zimm));
         }
         private void ADD(Instruction_R inst)
         {
-            Debug.WriteLine($"instruction called: ADD");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, regs.Read(inst.rs1) + regs.Read(inst.rs2));
+            inst.DEBUG_PRINT("ADD");
+            regs_shared.Write(inst.rd, regs_shared.Read(inst.rs1) + regs_shared.Read(inst.rs2));
         }
         private void SUB(Instruction_R inst)
         {
-            Debug.WriteLine($"instruction called: SUB");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, regs.Read(inst.rs1) - regs.Read(inst.rs2));
+            inst.DEBUG_PRINT("SUB");
+            regs_shared.Write(inst.rd, regs_shared.Read(inst.rs1) - regs_shared.Read(inst.rs2));
         }
         private void SLL(Instruction_R inst)
         {
-            Debug.WriteLine($"instruction called: SLL");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, regs.Read(inst.rs1) << (int)(regs.Read(inst.rs2) & 0b11111));
+            inst.DEBUG_PRINT("SLL");
+            regs_shared.Write(inst.rd, regs_shared.Read(inst.rs1) << (int)(regs_shared.Read(inst.rs2) & 0b11111));
         }
         private void SLT(Instruction_R inst)
         {
-            Debug.WriteLine($"instruction called: SLT");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, ((long)regs.Read(inst.rs1) < (long)regs.Read(inst.rs2)) ? 1ul : 0ul);
+            inst.DEBUG_PRINT("SLT");
+            regs_shared.Write(inst.rd, ((long)regs_shared.Read(inst.rs1) < (long)regs_shared.Read(inst.rs2)) ? 1ul : 0ul);
         }
         private void SLTU(Instruction_R inst)
         {
-            Debug.WriteLine($"instruction called: SLTU");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, (regs.Read(inst.rs1) < regs.Read(inst.rs2)) ? 1ul : 0ul);
+            inst.DEBUG_PRINT("SLTU");
+            regs_shared.Write(inst.rd, (regs_shared.Read(inst.rs1) < regs_shared.Read(inst.rs2)) ? 1ul : 0ul);
         }
         private void XOR(Instruction_R inst)
         {
-            Debug.WriteLine($"instruction called: XOR");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, regs.Read(inst.rs1) ^ regs.Read(inst.rs2));
+            inst.DEBUG_PRINT("XOR");
+            regs_shared.Write(inst.rd, regs_shared.Read(inst.rs1) ^ regs_shared.Read(inst.rs2));
         }
         private void SRL(Instruction_R inst)
         {
-            Debug.WriteLine($"instruction called: SRL");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, regs.Read(inst.rs1) >> (int)(regs.Read(inst.rs2) & 0b11111));
+            inst.DEBUG_PRINT("SRL");
+            regs_shared.Write(inst.rd, regs_shared.Read(inst.rs1) >> (int)(regs_shared.Read(inst.rs2) & 0b11111));
         }
         private void SRA(Instruction_R inst)
         {
-            Debug.WriteLine($"instruction called: SRA");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, inst.SEXT(((UInt32)regs.Read(inst.rs1)) >> (int)(regs.Read(inst.rs2) & 0b11111), 32 - (int)(regs.Read(inst.rs2) & 0b11111)));
+            inst.DEBUG_PRINT("SRA");
+            regs_shared.Write(inst.rd, (UInt32)inst.SEXT(((UInt32)regs_shared.Read(inst.rs1)) >> (int)(regs_shared.Read(inst.rs2) & 0b11111), 32 - (int)(regs_shared.Read(inst.rs2) & (UInt32)0b11111)));
         }
         private void OR(Instruction_R inst)
         {
-            Debug.WriteLine($"instruction called: OR");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, regs.Read(inst.rs1) | regs.Read(inst.rs2));
+            inst.DEBUG_PRINT("OR");
+            regs_shared.Write(inst.rd, regs_shared.Read(inst.rs1) | regs_shared.Read(inst.rs2));
         }
         private void AND(Instruction_R inst)
         {
-            Debug.WriteLine($"instruction called: AND");
-            inst.DEBUG_PRINT();
-            regs.Write(inst.rd, regs.Read(inst.rs1) & regs.Read(inst.rs2));
+            inst.DEBUG_PRINT("AND");
+            regs_shared.Write(inst.rd, regs_shared.Read(inst.rs1) & regs_shared.Read(inst.rs2));
         }
         private void ECALL()
         {
-            Debug.WriteLine($"instruction called: ECALL");
-            throw new IOException("ECALL instruction encountered, but not implemented.");
+            UInt32 action = (UInt32)regs_shared.Read(17);
+            UInt32 status = (UInt32)(regs_shared.Read(10) & 0xFFFFFFFF);
+            Debug.WriteLine($"instruction called: ECALL; a7={{{action}}}; a0={{{status}}}");
+            switch (action)
+            {
+                case 1:
+                    os.WriteStringConsole($"{status}"); return;
+                case 2:
+                    os.WriteStringConsole($"{(float)System.BitConverter.ToSingle(BitConverter.GetBytes(status), 0)}"); return;
+                case 4:
+                    os.WriteStringConsole((UInt64) status); return;
+                case 10:
+                    throw new IOException("ECALL instruction encountered, no args.");
+                case 11:
+                    os.WriteStringConsole(string.Concat((char)(status & 0xff))); return;
+                case 34:
+                    os.WriteStringConsole($"{status:X}"); return;
+                case 35:
+                    os.WriteStringConsole($"{status:B}"); return;
+                case 36:
+                    os.WriteStringConsole($"{status:B}"); return;
+                case 93:
+                    throw new IOException($"ECALL instruction encountered, {status}.");
+                default:
+                    throw new Exception($"ECALL instruction encountered with unknown action: {action}.");
+            }
         }
         private void URET()
         {
@@ -442,68 +480,76 @@ namespace RISC_V
         }
         private void SFENCE_VMA()
         {
-            //TODO
             Debug.WriteLine($"instruction called: SFENCE.VMA");
-        }
-        private void LOAD(Instruction_R inst)
-        {
-            Debug.WriteLine($"instruction called: LOAD");
-            inst.DEBUG_PRINT();
             //TODO
         }
-        private void STORE(Instruction_R inst)
+        private void LOAD(Instruction_I inst)
         {
-            Debug.WriteLine($"instruction called: STORE");
-            inst.DEBUG_PRINT();
-            //TODO
+            char[] sizeChar = { 'B', 'H', 'W' };
+            inst.DEBUG_PRINT($"L{sizeChar[inst.funct3]}",true);
+            ushort byteCnt = (ushort)((1 << inst.funct3) & 0b11);
+            UInt64 val = mem.Read((UInt32)(regs_shared.Read(inst.rs1) + (UInt64)(UInt32)inst.simm)) & inst.mask(byteCnt);
+            if ((inst.funct3 & 0b100) == 0)
+                val = (UInt64)(UInt32)inst.SEXT((UInt32)val, byteCnt * 8);
+            else
+                val = inst.ZEXT((UInt32)val, byteCnt * 8);
+            regs_shared.Write(inst.rd, val);
         }
-        private void JAL(Instruction_U inst)
+        private void STORE(Instruction_S inst)
         {
-            Debug.WriteLine($"instruction called: JAL");
-            inst.DEBUG_PRINT();
-            //TODO
+            char[] sizeChar = { 'B', 'H', 'W' };
+            inst.DEBUG_PRINT($"S{sizeChar[inst.funct3]}",true);
+            ushort byteCnt = (ushort)(1 << inst.funct3);
+            UInt32 addr = (UInt32)(regs_shared.Read(inst.rs1) + (UInt64)(UInt32)inst.simm);
+            mem.Write(addr, regs_shared.Read(inst.rs2) & inst.mask(byteCnt * 8));
         }
-        private void JALR(Instruction_S inst)
+        private void JAL(Instruction_J inst)
         {
-            Debug.WriteLine($"instruction called: JALR");
-            inst.DEBUG_PRINT();
-            //TODO
+            inst.DEBUG_PRINT("JAL",true);
+            regs_shared.Write(inst.rd, (UInt32)instructionSet.GetPC() + 4);
+            instructionSet.JumpRelative(inst.simm);
+        }
+        private void JALR(Instruction_I inst)
+        {
+            inst.DEBUG_PRINT("JALR",true);
+            regs_shared.Write(inst.rd, (UInt32)instructionSet.GetPC() + 4);
+            instructionSet.JumpOverride((regs_shared.Read(inst.rs1) + (UInt64)(UInt32)inst.simm) & ~1ul);
         }
         private void BEQ(Instruction_B inst)
         {
-            Debug.WriteLine($"instruction called: BEQ");
-            inst.DEBUG_PRINT();
-            //TODO
+            inst.DEBUG_PRINT("BEQ",true);
+            if((Int32)regs_shared.Read(inst.rs1) == (Int32)regs_shared.Read(inst.rs2))
+                instructionSet.JumpRelative(inst.simm);
         }
         private void BNE(Instruction_B inst)
         {
-            Debug.WriteLine($"instruction called: BNE");
-            inst.DEBUG_PRINT();
-            //TODO
+            inst.DEBUG_PRINT("BNE",true);
+            if((Int32)regs_shared.Read(inst.rs1) != (Int32)regs_shared.Read(inst.rs2))
+                instructionSet.JumpRelative(inst.simm);
         }
         private void BLT(Instruction_B inst)
         {
-            Debug.WriteLine($"instruction called: BLT");
-            inst.DEBUG_PRINT();
-            //TODO
+            inst.DEBUG_PRINT("BLT",true);
+            if((Int32)regs_shared.Read(inst.rs1) < (Int32)regs_shared.Read(inst.rs2))
+                instructionSet.JumpRelative(inst.simm);
         }
         private void BGE(Instruction_B inst)
         {
-            Debug.WriteLine($"instruction called: BGE");
-            inst.DEBUG_PRINT();
-            //TODO
+            inst.DEBUG_PRINT("BGE",true);
+            if((Int32)regs_shared.Read(inst.rs1) >= (Int32)regs_shared.Read(inst.rs2))
+                instructionSet.JumpRelative(inst.simm);
         }
         private void BLTU(Instruction_B inst)
         {
-            Debug.WriteLine($"instruction called: BLTU");
-            inst.DEBUG_PRINT();
-            //TODO
+            inst.DEBUG_PRINT("BLTU",true);
+            if((UInt32)regs_shared.Read(inst.rs1) < (UInt32)regs_shared.Read(inst.rs2))
+                instructionSet.JumpRelative(inst.simm);
         }
         private void BGEU(Instruction_B inst)
         {
-            Debug.WriteLine($"instruction called: BGEU");
-            inst.DEBUG_PRINT();
-            //TODO
+            inst.DEBUG_PRINT("BGEU",true);
+            if((UInt32)regs_shared.Read(inst.rs1) >= (UInt32)regs_shared.Read(inst.rs2))
+                instructionSet.JumpRelative(inst.simm);
         }
     }
     public abstract class RiscV_32_Extension(Mem memTarget, OsHandler os, RegisterBlock regs,RiscV_32 instructionSet)
@@ -537,9 +583,10 @@ namespace RISC_V
                     try
                     {
                         extension.Handle(inst);
+                        Debug.WriteLine($"Instruction handled by extension: {extension.GetType().Name}, opcode: {inst.opcode:B8}");
                     }catch(IOException e)
                     {
-                        Debug.WriteLine($"IOException encountered while handling instruction: {e.Message}");
+                        Debug.WriteLine(e.Message);
                         return true;
                     }
                     handled = true;
@@ -556,7 +603,7 @@ namespace RISC_V
         }
         public override bool Execute()
         {
-            UInt16 instruction = (UInt16)ReadValueFromMem(PC, 4);
+            UInt32 instruction = (UInt32)ReadValueFromMem(PC, 4);
             IncrimentPC();
             return ExecuteInstruction((ulong)instruction);
         }
@@ -579,7 +626,8 @@ namespace RISC_V
         {
             if (address > memTarget.maxAddress)
             {
-                throw new Exception("Jump target address be beyond the memory size.");
+                Console.WriteLine($"Jump target address {address:X8} is beyond the memory size.");
+                throw new Exception($"Jump target address {address:X8} is beyond the memory size.");
             }
             PC = (UInt32) address;
         }
@@ -626,36 +674,23 @@ namespace RISC_V
         }
         public override void Dump()
         {
-            Console.WriteLine($"PC: 0x{GetPC():X8}");
+            Debug.WriteLine($"PC: 0x{GetPC():X8}");
             for (int reg = 0; reg < regs_shared.Length; reg++)
             {
-                Console.WriteLine($"Reg x{reg}: 0x{regs_shared.Read((ushort)reg):X8}");
+                Debug.WriteLine($"Reg x{reg:D2}: 0x{regs_shared.Read((ushort)reg):X8}");
             }
-            if (memTarget.maxAddress < 0x100)
+        }
+        public override byte[] RegDump()
+        {
+            byte[] regValues = new byte[regs_shared.Length * 4];
+            for (int reg = 0; reg < regs_shared.Length; reg++)
             {
-                for (ulong addr = 0; addr < memTarget.maxAddress; addr++)
-                {
-                    Console.Write($"Mem[0x{addr:X8}]: 0x{ReadValueFromMem(addr, 1):X2}");
-                    if (addr % 4 == 0)
-                    {
-                        bool valid = false;
-                        Instruction inst = new((UInt32)ReadValueFromMem(addr, 1));
-                        foreach (RiscV_32_Extension extension in extensions)
-                        {
-                            if (extension.Validate(inst))
-                            {
-                                Console.Write($"\t  valid instruction: 0x{inst.bits:X8}");
-                                valid = true;
-                            }
-                        }
-                        if (!valid)
-                        {
-                            Console.Write($"\tinvalid instruction 0x{inst.bits:X8}");
-                        }
-                    }
-                    Console.WriteLine();
-                }
+                regValues[reg * 4 + 0] = (byte)(regs_shared.Read((ushort)reg) & 0xFF);
+                regValues[reg * 4 + 1] = (byte)((regs_shared.Read((ushort)reg) >> 8) & 0xFF);
+                regValues[reg * 4 + 2] = (byte)((regs_shared.Read((ushort)reg) >> 16) & 0xFF);
+                regValues[reg * 4 + 3] = (byte)((regs_shared.Read((ushort)reg) >> 24) & 0xFF);
             }
+            return regValues;
         }
     }
 }
