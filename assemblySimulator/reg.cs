@@ -53,6 +53,7 @@ namespace assemblySimulator
     {
         private readonly Reg[] registers;
         private DebugManager? debuger;
+        public readonly int Length;
         public RegisterBlock(int registerCount, ushort registerLength)
         {
             this.registers = new Reg[registerCount];
@@ -60,6 +61,7 @@ namespace assemblySimulator
             {
                 this.registers[i] = new(registerLength);
             }
+            this.Length = registerCount;
         }
         public RegisterBlock(int registerCount, ushort registerLength, bool[] writeable)
         {
@@ -69,6 +71,7 @@ namespace assemblySimulator
                 bool write = writeable.Length > i ? writeable[i] : true;
                 this.registers[i] = new(registerLength, write, 0);
             }
+            this.Length = registerCount;
         }
         public RegisterBlock(ushort[] registerLength)
         {
@@ -77,6 +80,7 @@ namespace assemblySimulator
             {
                 this.registers[i] = new(registerLength[i]);
             }
+            this.Length = registerLength.Length;
         }
         public RegisterBlock(ushort[] registerLength, bool[] writeable, UInt64[] initialValue)
         {
@@ -85,6 +89,7 @@ namespace assemblySimulator
             {
                 this.registers[i] = new(registerLength[i], writeable.Length >= i || writeable[i], initialValue.Length < i ? initialValue[i] : 0);
             }
+            this.Length = registerLength.Length;
         }
         public RegisterBlock(short registerCount, ushort registerLength, UInt64[] initialValue)
         {
@@ -93,6 +98,7 @@ namespace assemblySimulator
             {
                 this.registers[i] = new(registerLength, initialValue.Length < i ? initialValue[i] : 0);
             }
+            this.Length = registerCount;
         }
         public RegisterBlock(short registerCount, ushort[] registerLength, UInt64[] initialValue)
         {
@@ -101,6 +107,7 @@ namespace assemblySimulator
             {
                 this.registers[i] = new(registerLength[Math.Min(i, registerLength.Length - 1)], initialValue.Length < i ? initialValue[i] : 0);
             }
+            this.Length = registerCount;
         }
         public RegisterBlock(short registerCount, ushort registerLength)
         {
@@ -109,6 +116,7 @@ namespace assemblySimulator
             {
                 this.registers[i] = new(registerLength, 0);
             }
+            this.Length = registerCount;
         }
         public void SetDebugger(DebugManager debuger)
         {

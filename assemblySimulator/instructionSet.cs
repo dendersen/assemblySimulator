@@ -254,8 +254,8 @@ namespace assemblySimulator
         public abstract void JumpOverride(UInt64 address);
         public abstract void JumpRelative(Int64 offset);
 
-        public abstract void ExecuteInstruction(ulong instruction);
-        public abstract void Execute();
+        public abstract bool ExecuteInstruction(ulong instruction);
+        public abstract bool Execute();
         /**
          * tool for allowing other components to recieve the currently used opcode from instruction
          */
@@ -288,6 +288,10 @@ namespace assemblySimulator
          * formats the raw memory structure to fit into the number system of a UInt64
          */
         public abstract void WriteArrayToMem(UInt64 startAddress, UInt64[] value, int bytesPerIndex);
+        public virtual void Dump()
+        {
+            Console.WriteLine($"PC: {GetPC():X8}");
+        }
     }
     public class InstructionLoader: AssemblyLoadContext
     {

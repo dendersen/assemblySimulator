@@ -1,3 +1,4 @@
 {
-  "dotnet.defaultSolution": "assemblySimulator.slnx"
+  "dotnet.defaultSolution": "assemblySimulator.slnx",
+  "editor.indentSize": 4
 }

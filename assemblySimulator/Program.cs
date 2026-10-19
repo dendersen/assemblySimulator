@@ -41,13 +41,18 @@ public class MainClass
         
         bool autoTets = false;
         UInt64 memLength = 0xFFFF;
-        byte[] memFile;
+        string? filePath = null;
         while(true)
         {
             string option = Console.ReadLine();
             if (option == "test")
             {
                 autoTets = true;
+            }
+            if (option == "file")
+            {
+                Console.WriteLine("Enter file path:");
+                filePath = Console.ReadLine();
             }
             else if (option == "memtest")
             {
@@ -75,11 +80,16 @@ public class MainClass
         }
         if (autoTets)
         {
-            RunTest();
+            RunTest(loadedInstruction[0], memBytesPerAddress);
             return;
         }
-        memFile = ReadBinaryFile(null);
-        if (memFile.Length == 0)
+        RunArchitecture(loadedInstruction[0], filePath, memBytesPerAddress, memLength);
+    }
+    private static void RunArchitecture(Type loadedInstruction, string testFile, short memBytesPerAddress, UInt64 memLength)
+    {
+        byte[] memFile;
+        memFile = ReadBinaryFile(testFile);
+        if (memLength == 0)
         {
             memLength = (UInt64)memFile.Length / (UInt64)memBytesPerAddress + (UInt64)((memFile.Length % memBytesPerAddress == 0) ? 0 : 1);
         }
@@ -87,7 +97,7 @@ public class MainClass
         OsHandler os = new(mem, null, null);
         InstructionSet instruct;
         {
-            InstructionSet? _instruct = (InstructionSet?)Activator.CreateInstance(loadedInstruction[0], mem, os);
+            InstructionSet? _instruct = (InstructionSet?)Activator.CreateInstance(loadedInstruction, mem, os);
             if (_instruct == null)
             {
                 Console.Error.WriteLine("Error: Could not create InstructionSet instance.");
@@ -98,13 +108,28 @@ public class MainClass
         mem.FillMem(memFile);
         while (true)
         {
-            instruct.Execute();
+            if (!instruct.Execute())
+            {
+                Console.WriteLine("Execution halted.");
+                instruct.Dump();
+                break;
+            }
         }
     }
-    public static void RunTest()
+    public static void RunTest(Type InstructionSet, short memBytesPerAddress)
     {
-        filePath = FilePicker.ChooseFile("Select a binary file to load into memory");
-        // Implementation for running tests
+        String[] testGroups = {"task1", "task2", "task3", "task4"};
+        foreach (String testGroup in testGroups)
+        {
+            Console.WriteLine("Running tests for: " + testGroup);
+            foreach (String test in Directory.GetFiles("tests/" + testGroup, "*.bin"))
+            {
+                Console.WriteLine("Running test: " + test);
+                RunArchitecture(InstructionSet, test, memBytesPerAddress, 0);
+                Console.WriteLine("Test completed, press Enter to continue.");
+                Console.ReadLine();
+            }
+        }
     }
     public static byte[] ReadBinaryFile(string? filePath)
     {
