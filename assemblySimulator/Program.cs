@@ -44,7 +44,12 @@ public class MainClass
         string? filePath = null;
         while(true)
         {
-            string option = Console.ReadLine();
+            string option = Console.ReadLine() ?? "";
+            if (string.IsNullOrWhiteSpace(option))
+            {
+                Console.WriteLine("No option entered.");
+                continue;
+            }
             if (option == "test")
             {
                 autoTets = true;
@@ -61,7 +66,8 @@ public class MainClass
             else if (option == "setmem")
             {
                 Console.WriteLine("Enter memory length (in address count):");
-                memLength = UInt64.Parse(Console.ReadLine());
+                memLength = UInt64.Parse(Console.ReadLine() ?? "0");
+                Console.WriteLine($"Memory length set to: {memLength}");
             }
             else if (option == "sizeFromFile")
             {
@@ -85,7 +91,7 @@ public class MainClass
         }
         RunArchitecture(loadedInstruction[0], filePath, memBytesPerAddress, memLength);
     }
-    private static InstructionSet RunArchitecture(Type loadedInstruction, string testFile, short memBytesPerAddress, UInt64 memLength, bool printDump = true)
+    private static InstructionSet? RunArchitecture(Type loadedInstruction, string? testFile, short memBytesPerAddress, UInt64 memLength, bool printDump = true)
     {
         byte[] memFile;
         memFile = ReadBinaryFile(testFile);
@@ -101,7 +107,7 @@ public class MainClass
             if (_instruct == null)
             {
                 Console.Error.WriteLine("Error: Could not create InstructionSet instance.");
-                return null;
+                return default!;
             }
             instruct = _instruct;
         }
@@ -128,25 +134,42 @@ public class MainClass
             Console.WriteLine("Running tests for: " + testGroup);
             foreach (String test in Directory.GetFiles("tests/" + testGroup, "*.bin"))
             {
-                Console.WriteLine("Running test: " + test);
-                InstructionSet instruct = RunArchitecture(InstructionSet, test, memBytesPerAddress, 0, false);
-                byte[] regDump = instruct.RegDump();
-                byte[] regTarget = ReadBinaryFile(test.Replace(".bin",".res"));
-                if (regDump.Length != regTarget.Length || !regDump.SequenceEqual(regTarget))
+                try
                 {
-                    Console.WriteLine("Test failed: " + test);
+                    Console.WriteLine("Running test: " + test);
+                    InstructionSet? instruct = RunArchitecture(InstructionSet, test, memBytesPerAddress, 0, false);
+                    if (instruct == null)
+                    {
+                        Console.WriteLine("Test \e[41mfailed\e[0m: " + test);
+                        Console.WriteLine("Instruction set failed to generate");
+                        continue;
+                    }
+                    byte[] regDump = instruct.RegDump();
+                    byte[] regTarget = ReadBinaryFile(test.Replace(".bin",".res"));
+                    if (regDump.Length != regTarget.Length || !regDump.SequenceEqual(regTarget))
+                    {
+                        Console.WriteLine("Test \e[41mfailed\e[0m: " + test);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Test \e[42mpassed\e[0m: " + test);
+                    }
+                    Console.WriteLine("type 'y' to print dump");
+                    string? response = Console.ReadLine();
+                    if (response?.ToLower() == "y")
+                    {
+                        instruct.Dump();
+                        Console.WriteLine("press enter to continue...");
+                        Console.ReadLine();
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Console.WriteLine("Test passed: " + test);
-                }
-                Console.WriteLine("type 'y' to print dump");
-                string? response = Console.ReadLine();
-                if (response?.ToLower() == "y")
-                {
-                    instruct.Dump();
-                    Console.WriteLine("press enter to continue...");
-                    Console.ReadLine();
+                    Console.WriteLine("Test \e[41mfailed\e[0m: " + test);
+                    Console.WriteLine("Test encountered an unhandled exception.");
+                    Console.WriteLine(ex.Message);
+                    Console.WriteLine(ex.StackTrace);
+                    return;
                 }
             }
         }

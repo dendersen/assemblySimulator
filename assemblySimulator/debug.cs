@@ -82,7 +82,6 @@ namespace assemblySimulator
                         }
                         
                         break;
-
                 }
             }
         }
