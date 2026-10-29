@@ -507,7 +507,7 @@ namespace RISC_V
         {
             inst.DEBUG_PRINT("JAL",true);
             regs_shared.Write(inst.rd, (UInt32)instructionSet.GetPC() + 4);
-            instructionSet.JumpRelative(inst.simm);
+            instructionSet.JumpRelative(inst.simm,true);
         }
         private void JALR(Instruction_I inst)
         {
@@ -519,37 +519,37 @@ namespace RISC_V
         {
             inst.DEBUG_PRINT("BEQ",true);
             if((Int32)regs_shared.Read(inst.rs1) == (Int32)regs_shared.Read(inst.rs2))
-                instructionSet.JumpRelative(inst.simm);
+                instructionSet.JumpRelative(inst.simm,true);
         }
         private void BNE(Instruction_B inst)
         {
             inst.DEBUG_PRINT("BNE",true);
             if((Int32)regs_shared.Read(inst.rs1) != (Int32)regs_shared.Read(inst.rs2))
-                instructionSet.JumpRelative(inst.simm);
+                instructionSet.JumpRelative(inst.simm,true);
         }
         private void BLT(Instruction_B inst)
         {
             inst.DEBUG_PRINT("BLT",true);
             if((Int32)regs_shared.Read(inst.rs1) < (Int32)regs_shared.Read(inst.rs2))
-                instructionSet.JumpRelative(inst.simm);
+                instructionSet.JumpRelative(inst.simm,true);
         }
         private void BGE(Instruction_B inst)
         {
             inst.DEBUG_PRINT("BGE",true);
             if((Int32)regs_shared.Read(inst.rs1) >= (Int32)regs_shared.Read(inst.rs2))
-                instructionSet.JumpRelative(inst.simm);
+                instructionSet.JumpRelative(inst.simm,true);
         }
         private void BLTU(Instruction_B inst)
         {
             inst.DEBUG_PRINT("BLTU",true);
             if((UInt32)regs_shared.Read(inst.rs1) < (UInt32)regs_shared.Read(inst.rs2))
-                instructionSet.JumpRelative(inst.simm);
+                instructionSet.JumpRelative(inst.simm,true);
         }
         private void BGEU(Instruction_B inst)
         {
             inst.DEBUG_PRINT("BGEU",true);
             if((UInt32)regs_shared.Read(inst.rs1) >= (UInt32)regs_shared.Read(inst.rs2))
-                instructionSet.JumpRelative(inst.simm);
+                instructionSet.JumpRelative(inst.simm,true);
         }
     }
     public abstract class RiscV_32_Extension(Mem memTarget, OsHandler os, RegisterBlock regs,RiscV_32 instructionSet)
@@ -567,6 +567,7 @@ namespace RISC_V
         private List<RiscV_32_Extension> extensions;
         public static new readonly short memBytesPerAddress = 1;
         private UInt32 PC = 0;
+        private bool blockPC = false;
         public RiscV_32(ref Mem memTarget_, OsHandler os) : base(ref memTarget_, os)
         {
             regs_shared = new(32, 32,[false]);
@@ -619,7 +620,9 @@ namespace RISC_V
 
         public override void IncrimentPC()
         {
-            JumpRelative(4);
+            if(!blockPC)
+                JumpRelative(4);
+            blockPC = false;
         }
 
         public override void JumpOverride(ulong address)
@@ -632,9 +635,14 @@ namespace RISC_V
             PC = (UInt32) address;
         }
 
+        public void JumpRelative(long offset, bool isBranch)
+        {
+            blockPC = isBranch;
+            JumpOverride(PC + (UInt32)offset);
+        }
         public override void JumpRelative(long offset)
         {
-            JumpOverride(PC + (UInt32)offset);
+            JumpRelative(offset, false);
         }
 
         public override ulong[] ReadArrayFromMem(ulong startAddress, int bytesPerIndex, ulong length)
