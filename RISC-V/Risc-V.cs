@@ -26,8 +26,7 @@ namespace RISC_V
         }
         public UInt32 ZEXT(UInt32 value, int bitCount)
         {
-            int shift = 32 - bitCount;
-            return (UInt32)(((Int32)(value << shift)) >> shift);
+            return value & mask(bitCount);
         }
         public Int32 SEXT(UInt32 value, int bitCount)
         {
@@ -73,10 +72,9 @@ namespace RISC_V
     public class Instruction_S(Instruction inst) : Instruction(inst.bits)
     {
         protected ushort imm => (ushort)((ReadBits(bits,  7, 11) << 0) | 
-                                      (ReadBits(bits, 25, 31) << 5));
+                                         (ReadBits(bits, 25, 31) << 5));
         public Int32 simm => SEXT(imm, 12);
         public UInt32 zimm => ZEXT(imm, 12);
-        public ushort rd => (ushort)ReadBits(bits, 7, 11); //PART OF imm
         public ushort funct3 => (ushort)ReadBits(bits, 12, 14);
         public ushort rs1 => (ushort)ReadBits(bits, 15, 19);
         public ushort rs2 => (ushort)ReadBits(bits, 20, 24);
@@ -86,7 +84,7 @@ namespace RISC_V
         }
         public void DEBUG_PRINT(string instructionName, bool signedImm = true)
         {
-            Debug.WriteLine($"called instruction: {instructionName}, X{rs2}, {(signedImm ? simm : zimm)}({rs1})");
+            Debug.WriteLine($"called instruction: {instructionName}, X{rs2}, {(signedImm ? simm : zimm)}(X{rs1})");
         }
     }
     public class Instruction_B(Instruction inst) : Instruction(inst.bits)
@@ -326,7 +324,7 @@ namespace RISC_V
         }
         private void LUI(Instruction_U inst)
         {
-            inst.DEBUG_PRINT("LUI");
+            inst.DEBUG_PRINT("LUI",false);
             regs_shared.Write(inst.rd, inst.zimm);
         }
         private void AUIPC(Instruction_U inst)
@@ -486,9 +484,11 @@ namespace RISC_V
         private void LOAD(Instruction_I inst)
         {
             char[] sizeChar = { 'B', 'H', 'W' };
-            inst.DEBUG_PRINT($"L{sizeChar[inst.funct3]}",true);
-            ushort byteCnt = (ushort)((1 << inst.funct3) & 0b11);
-            UInt64 val = mem.Read((UInt32)(regs_shared.Read(inst.rs1) + (UInt64)(UInt32)inst.simm)) & inst.mask(byteCnt);
+            string sign = (inst.funct3 & 0b100) == 0 ? "" : "U";
+            inst.DEBUG_PRINT($"L{sizeChar[inst.funct3 & 0b11]}{ sign }",true);
+            ushort byteCnt = (ushort)(1 << (inst.funct3 & 0b11));
+            UInt64 addr = (UInt32)(regs_shared.Read(inst.rs1) + (UInt64)(UInt32)inst.simm);
+            UInt64 val = instructionSet.ReadValueFromMem(addr, byteCnt) & inst.mask(byteCnt * 8);
             if ((inst.funct3 & 0b100) == 0)
                 val = (UInt64)(UInt32)inst.SEXT((UInt32)val, byteCnt * 8);
             else
@@ -498,10 +498,12 @@ namespace RISC_V
         private void STORE(Instruction_S inst)
         {
             char[] sizeChar = { 'B', 'H', 'W' };
-            inst.DEBUG_PRINT($"S{sizeChar[inst.funct3]}",true);
-            ushort byteCnt = (ushort)(1 << inst.funct3);
+            string sign = (inst.funct3 & 0b100) == 0 ? "" : "U";
+            inst.DEBUG_PRINT($"S{sizeChar[inst.funct3 & 0b11]}{ sign }",true);
+            ushort byteCnt = (ushort)(1 << (inst.funct3 & 0b11));
             UInt32 addr = (UInt32)(regs_shared.Read(inst.rs1) + (UInt64)(UInt32)inst.simm);
-            mem.Write(addr, regs_shared.Read(inst.rs2) & inst.mask(byteCnt * 8));
+            UInt64 val = regs_shared.Read(inst.rs2) & inst.mask(byteCnt * 8);
+            instructionSet.WriteValueToMem(addr, val, byteCnt);
         }
         private void JAL(Instruction_J inst)
         {
@@ -575,6 +577,11 @@ namespace RISC_V
         }
         public override bool ExecuteInstruction(ulong instruction)
         {
+            if (instruction == 0)
+            {
+                Debug.WriteLine($"Instruction is 0, halting execution on illegal opcode.");
+                return true;
+            }
             bool handled = false;
             Instruction inst = new((UInt32)instruction);
             foreach (RiscV_32_Extension extension in extensions)
@@ -605,8 +612,9 @@ namespace RISC_V
         public override bool Execute()
         {
             UInt32 instruction = (UInt32)ReadValueFromMem(PC, 4);
+            bool ret =  ExecuteInstruction((ulong)instruction);
             IncrimentPC();
-            return ExecuteInstruction((ulong)instruction);
+            return ret;
         }
         public override ulong GetOpcode(ulong instruction)
         {
@@ -677,7 +685,7 @@ namespace RISC_V
         {
             for (int i = 0; i < byteCount; i++)
             {
-                memTarget.Write(address + (ulong)i, (value >> (8 * i)));
+                memTarget.Write(address + (ulong)i, (value >> (8 * i)) & 0xFF);
             }
         }
         public override void Dump()

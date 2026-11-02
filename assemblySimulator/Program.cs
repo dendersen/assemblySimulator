@@ -54,14 +54,14 @@ public class MainClass
             {
                 autoTets = true;
             }
-            if (option == "file")
+            else if (option == "file")
             {
                 Console.WriteLine("Enter file path:");
                 filePath = Console.ReadLine();
             }
             else if (option == "memtest")
             {
-                TestMem(memBytesPerAddress, 0xFFFF);
+                TestMem(memBytesPerAddress, memLength != 0 ? memLength : 0xFFFF);
             }
             else if (option == "setmem")
             {
@@ -86,7 +86,7 @@ public class MainClass
         }
         if (autoTets)
         {
-            RunTest(loadedInstruction[0], memBytesPerAddress);
+            RunTest(loadedInstruction[0], memBytesPerAddress, memLength);
             return;
         }
         RunArchitecture(loadedInstruction[0], filePath, memBytesPerAddress, memLength);
@@ -126,7 +126,7 @@ public class MainClass
         }
         return instruct;
     }
-    public static void RunTest(Type InstructionSet, short memBytesPerAddress)
+    public static void RunTest(Type InstructionSet, short memBytesPerAddress, UInt64 memLength = 0)
     {
         String[] testGroups = {"task1", "task2", "task3", "task4"};
         foreach (String testGroup in testGroups)
@@ -137,7 +137,7 @@ public class MainClass
                 try
                 {
                     Console.WriteLine("Running test: " + test);
-                    InstructionSet? instruct = RunArchitecture(InstructionSet, test, memBytesPerAddress, 0, false);
+                    InstructionSet? instruct = RunArchitecture(InstructionSet, test, memBytesPerAddress, memLength, false);
                     if (instruct == null)
                     {
                         Console.WriteLine("Test \e[41mfailed\e[0m: " + test);
@@ -159,6 +159,18 @@ public class MainClass
                     if (response?.ToLower() == "y")
                     {
                         instruct.Dump();
+                        Console.WriteLine("regComparison:");
+                        for (int i = 0; i < regDump.Length; i += 4)
+                        {
+                            UInt32 wordGot = BitConverter.ToUInt32(regDump, i);
+                            UInt32 wordExpected = BitConverter.ToUInt32(regTarget, i);
+                            Console.Write($"reg[{i:D2}/4]: {wordGot:X8}");
+                            if (wordGot != wordExpected)
+                            {
+                                Console.Write($" expected: {wordExpected:X8}");
+                            }
+                            Console.WriteLine(",");
+                        }
                         Console.WriteLine("press enter to continue...");
                         Console.ReadLine();
                     }

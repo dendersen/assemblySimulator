@@ -469,7 +469,9 @@ namespace assemblySimulator
             Debug.WriteLine($"Writing {value:X4} to address {address:X4}");
             if (value >= (1ul << (bytesPerAddress * 8)) && bytesPerAddress != 8)
             {
-                throw new Exception("Memory module write value exceeds maximum value for bytes per address");
+                Debug.Write($"Value exceeds maximum value for bytes per address, truncating from {value:X8} ");
+                value &= (1ul << (bytesPerAddress * 8)) - 1;
+                Debug.WriteLine($"to {value:X4}");
             }
             if (this.LockMem(address))
             {
