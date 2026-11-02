@@ -164,10 +164,10 @@ public class MainClass
                         {
                             UInt32 wordGot = BitConverter.ToUInt32(regDump, i);
                             UInt32 wordExpected = BitConverter.ToUInt32(regTarget, i);
-                            Console.Write($"reg[{i:D2}/4]: {wordGot:X8}");
+                            Console.Write($"reg[{i/4:D2}]: 0x{wordGot:X8}");
                             if (wordGot != wordExpected)
                             {
-                                Console.Write($" expected: {wordExpected:X8}");
+                                Console.Write($" expected: 0x{wordExpected:X8}");
                             }
                             Console.WriteLine(",");
                         }

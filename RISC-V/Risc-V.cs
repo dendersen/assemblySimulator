@@ -57,7 +57,7 @@ namespace RISC_V
         public ushort rd => (ushort)ReadBits(bits, 7, 11);
         public ushort funct3 => (ushort)ReadBits(bits, 12, 14);
         public ushort rs1 => (ushort)ReadBits(bits, 15, 19);
-        protected ushort imm => (ushort)ReadBits(bits, 20, 31);
+        protected UInt32 imm => (UInt32)ReadBits(bits, 20, 31);
         public Int32 simm => SEXT(imm, 12);
         public UInt32 zimm => ZEXT(imm, 12);
         public new void DEBUG_PRINT()
@@ -71,7 +71,7 @@ namespace RISC_V
     }
     public class Instruction_S(Instruction inst) : Instruction(inst.bits)
     {
-        protected ushort imm => (ushort)((ReadBits(bits,  7, 11) << 0) | 
+        protected UInt32 imm => (UInt32)((ReadBits(bits,  7, 11) << 0) | 
                                          (ReadBits(bits, 25, 31) << 5));
         public Int32 simm => SEXT(imm, 12);
         public UInt32 zimm => ZEXT(imm, 12);
@@ -89,7 +89,7 @@ namespace RISC_V
     }
     public class Instruction_B(Instruction inst) : Instruction(inst.bits)
     {
-        protected ushort imm => (ushort)((ReadBits(bits,  7,  7) << 11) |
+        protected UInt32 imm => (UInt32)((ReadBits(bits,  7,  7) << 11) |
                                       (ReadBits(bits,  8, 11) <<  1) |
                                       (ReadBits(bits, 25, 30) <<  5) |
                                       (ReadBits(bits, 31, 31) << 12));
@@ -125,19 +125,31 @@ namespace RISC_V
     public class Instruction_J(Instruction inst) : Instruction(inst.bits)
     {
         public ushort rd => (ushort)ReadBits(bits, 7, 11);
-        protected ushort imm => (ushort)(ReadBits(bits, 12, 19) << 12 |
+        protected UInt32 imm => (UInt32)(ReadBits(bits, 12, 19) << 12 |
                                       ReadBits(bits, 20, 20) << 11 |
                                       ReadBits(bits, 21, 30) <<  1 |
                                       ReadBits(bits, 31, 31) << 20);
-        public Int32 simm => (Int32)imm;
-        public UInt32 zimm => imm;
+        public Int32 simm => SEXT(imm, 21);
+        public UInt32 zimm => ZEXT(imm, 21);
         public new void DEBUG_PRINT()
         {
             Debug.WriteLine($"Instruction_J: rd=0x{rd:X1}, imm=0x{imm:X4}");
         }
         public void DEBUG_PRINT(string instructionName, bool signedImm = true)
         {
-            Debug.WriteLine($"called instruction: {instructionName}, X{rd}, {(signedImm ? simm : zimm)}");
+            if (signedImm)
+            {
+                if (simm < 0)
+                {
+                    Debug.WriteLine($"called instruction: {instructionName}, X{rd}, -{Math.Abs(simm)}");
+                    return;
+                }else
+                {
+                    Debug.WriteLine($"called instruction: {instructionName}, X{rd}, {Math.Abs(simm)}");
+                    return;
+                }
+            }
+            Debug.WriteLine($"called instruction: {instructionName}, X{rd}, {zimm}");
         }
     }
     public class RV32I(Mem memTarget, OsHandler os, RegisterBlock regs, RiscV_32 instructionSet) : RiscV_32_Extension(memTarget, os, regs, instructionSet)
@@ -453,7 +465,7 @@ namespace RISC_V
                 case 93:
                     throw new IOException($"ECALL instruction encountered, {status}.");
                 default:
-                    throw new Exception($"ECALL instruction encountered with unknown action: {action}.");
+                    throw new IOException($"ECALL instruction encountered with unknown action: {action}.");
             }
         }
         private void URET()
@@ -514,8 +526,8 @@ namespace RISC_V
         private void JALR(Instruction_I inst)
         {
             inst.DEBUG_PRINT("JALR",true);
-            regs_shared.Write(inst.rd, (UInt32)instructionSet.GetPC() + 4);
-            instructionSet.JumpOverride((regs_shared.Read(inst.rs1) + (UInt64)(UInt32)inst.simm) & ~1ul);
+            regs_shared.Write(inst.rd, (UInt32)instructionSet.GetPC());
+            instructionSet.JumpOverride((regs_shared.Read(inst.rs1) + (UInt64)(UInt32)inst.simm) & ~1ul, true);
         }
         private void BEQ(Instruction_B inst)
         {
@@ -632,7 +644,11 @@ namespace RISC_V
                 JumpRelative(4);
             blockPC = false;
         }
-
+        public void JumpOverride(ulong address, bool isBranch)
+        {
+            blockPC = isBranch;
+            JumpOverride(address);
+        }
         public override void JumpOverride(ulong address)
         {
             if (address > memTarget.maxAddress)
