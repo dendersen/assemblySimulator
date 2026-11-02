@@ -160,8 +160,8 @@ namespace RISC_V
             Instruction_I inst_I = new(inst);
             Instruction_S inst_S = new(inst);
             Instruction_B inst_B = new(inst);
-            //Instruction_U inst_U = new(inst); not in RV32I
-            //Instruction_J inst_J = new(inst); not in RV32I
+            //Instruction_U inst_U = new(inst); when used, only opcode needed
+            //Instruction_J inst_J = new(inst); when used, only opcode needed
             switch (inst.opcode)
             {
                 case 0b0110111: // LUI
