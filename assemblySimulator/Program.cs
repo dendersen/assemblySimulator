@@ -39,11 +39,12 @@ public class MainClass
 
         Debug.WriteLine($"memBytesPerAddress: {memBytesPerAddress}");
         
-        bool autoTets = false;
+        bool autoTest = false;
         UInt64 memLength = 0xFFFF;
         string? filePath = null;
         while(true)
         {
+            Console.WriteLine("Options: test, memtest, setmem, sizeFromFile, q, help");
             string option = Console.ReadLine() ?? "";
             if (string.IsNullOrWhiteSpace(option))
             {
@@ -52,12 +53,21 @@ public class MainClass
             }
             if (option == "test")
             {
-                autoTets = true;
+                if (autoTest)
+                {
+                    autoTest = false;
+                    Console.WriteLine("Auto test disabled.");
+                }
+                else
+                {
+                    autoTest = true;
+                    Console.WriteLine("Auto test enabled.");
+                }
             }
             else if (option == "file")
             {
                 Console.WriteLine("Enter file path:");
-                filePath = Console.ReadLine();
+                filePath = FilePicker.ChooseFile("Select a binary file to load into memory");
             }
             else if (option == "memtest")
             {
@@ -66,25 +76,64 @@ public class MainClass
             else if (option == "setmem")
             {
                 Console.WriteLine("Enter memory length (in address count):");
-                memLength = UInt64.Parse(Console.ReadLine() ?? "0");
-                Console.WriteLine($"Memory length set to: {memLength}");
+                string? memLengthStr = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(memLengthStr))
+                {
+                    Console.WriteLine("No memory length entered.");
+                    continue;
+                }
+                if (memLengthStr.StartsWith("0x"))
+                {
+                    memLengthStr = memLengthStr[2..];
+                    memLength = Convert.ToUInt64(memLengthStr, 16);
+                    continue;
+                }
+                else if (memLengthStr.StartsWith("0b"))
+                {
+                    memLengthStr = memLengthStr[2..];
+                    memLength = Convert.ToUInt64(memLengthStr, 2);
+                    continue;
+                }
+                else if (memLengthStr.StartsWith("0o"))
+                {
+                    memLengthStr = memLengthStr[2..];
+                    memLength = Convert.ToUInt64(memLengthStr, 8);
+                    continue;
+                }
+                else 
+                {
+                    memLength = Convert.ToUInt64(memLengthStr, 10);
+                }
+                Console.WriteLine($"Memory length set to: {memLength:X} addresses");
+                Console.WriteLine($"Memory length in bytes: {memLength * (UInt64)memBytesPerAddress:X}");
             }
             else if (option == "sizeFromFile")
             {
                 memLength = 0;
+                Console.WriteLine("Memory length will be determined after loading the file(s).");
+            }
+            else if (option == "help")
+            {
+                Console.WriteLine("test: execute the tests in subdirectories of the 'tests' directory, type again to disable auto test");
+                Console.WriteLine("file: select a binary file to load into memory");
+                Console.WriteLine("memtest: run the memory module test, making sure all values are correctly stored and retrieved");
+                Console.WriteLine("setmem: set the memory length to a prespecified value");
+                Console.WriteLine("sizeFromFile: set the memory length to the size of the file");
+                Console.WriteLine("q: quit the options menu, execute the instruciton set");
+                Console.WriteLine("help: display this help message");
             }
             else if (option == "q")
             {
+                Console.WriteLine("Exiting options menu and starting program.");
                 break;
             }
             else
             {
-                Console.WriteLine("Unknown option.");
-                Console.WriteLine("Options: test, memtest, setmem, sizeFromFile, q");
+                Console.WriteLine($"Unknown option: {option}");
                 continue;
             }
         }
-        if (autoTets)
+        if (autoTest)
         {
             RunTest(loadedInstruction[0], memBytesPerAddress, memLength);
             return;
