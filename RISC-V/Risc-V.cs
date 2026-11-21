@@ -4,10 +4,12 @@ using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 
+
 namespace RISC_V
 {
     public class Instruction(UInt32 bits)
     {
+        public static readonly string instructionPrint = "instructionDebugPrint";
         public UInt32 bits = bits;
         internal UInt32 mask(int bitCount)
         {
@@ -22,7 +24,10 @@ namespace RISC_V
         public ushort opcode => (ushort)ReadBits(bits,  0, 6);
         public void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction: bits=0x{bits:X8}, opcode=0x{opcode:X2}");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"Instruction: bits=0x{bits:X8}, opcode=0x{opcode:X2}");
+            }
         }
         public UInt32 ZEXT(UInt32 value, int bitCount)
         {
@@ -45,11 +50,17 @@ namespace RISC_V
         public ushort funct7 => (ushort)ReadBits(bits, 25, 31);
         public new void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction_R: rd=0x{rd:X1}, funct3=0x{funct3:X1}, rs1=0x{rs1:X1}, rs2=0x{rs2:X1}, funct7=0x{funct7:X2}");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"Instruction_R: rd=0x{rd:X1}, funct3=0x{funct3:X1}, rs1=0x{rs1:X1}, rs2=0x{rs2:X1}, funct7=0x{funct7:X2}");
+            }
         }
         public void DEBUG_PRINT(string instructionName)
         {
-            Debug.WriteLine($"called instruction: {instructionName}, X{rd}, X{rs1}, X{rs2}");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"called instruction: {instructionName}, X{rd}, X{rs1}, X{rs2}");
+            }
         }
     }
     public class Instruction_I(Instruction inst) : Instruction(inst.bits)
@@ -62,11 +73,17 @@ namespace RISC_V
         public UInt32 zimm => ZEXT(imm, 12);
         public new void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction_I: rd=0x{rd:X1}, funct3=0x{funct3:X1}, rs1=0x{rs1:X1}, imm=0x{imm:X4}");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"Instruction_I: rd=0x{rd:X1}, funct3=0x{funct3:X1}, rs1=0x{rs1:X1}, imm=0x{imm:X4}");
+            }
         }
         public void DEBUG_PRINT(string instructionName, bool signedImm = true)
         {
-            Debug.WriteLine($"called instruction: {instructionName}, X{rd}, X{rs1}, {(signedImm ? simm : zimm)}");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"called instruction: {instructionName}, X{rd}, X{rs1}, {(signedImm ? simm : zimm)}");
+            }
         }
     }
     public class Instruction_S(Instruction inst) : Instruction(inst.bits)
@@ -80,11 +97,17 @@ namespace RISC_V
         public ushort rs2 => (ushort)ReadBits(bits, 20, 24);
         public new void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction_S: rs1=0x{rs1:X1}, funct3=0x{funct3:X1}, rs2=0x{rs2:X1}, funct3=0x{funct3:X1}, imm=0x{imm:X4}");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"Instruction_S: rs1=0x{rs1:X1}, funct3=0x{funct3:X1}, rs2=0x{rs2:X1}, funct3=0x{funct3:X1}, imm=0x{imm:X4}");
+            }
         }
         public void DEBUG_PRINT(string instructionName, bool signedImm = true)
         {
-            Debug.WriteLine($"called instruction: {instructionName}, X{rs2}, {(signedImm ? simm : zimm)}(X{rs1})");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"called instruction: {instructionName}, X{rs2}, {(signedImm ? simm : zimm)}(X{rs1})");
+            }
         }
     }
     public class Instruction_B(Instruction inst) : Instruction(inst.bits)
@@ -100,11 +123,17 @@ namespace RISC_V
         public ushort rs2 => (ushort)ReadBits(bits, 20, 24);
         public new void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction_B: rs1=0x{rs1:X1}, funct3=0x{funct3:X1}, rs2=0x{rs2:X1}, imm=0x{imm:X4}");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"Instruction_B: rs1=0x{rs1:X1}, funct3=0x{funct3:X1}, rs2=0x{rs2:X1}, imm=0x{imm:X4}");
+            }
         }
         public void DEBUG_PRINT(string instructionName, bool signedImm = true)
         {
-            Debug.WriteLine($"called instruction: {instructionName}, X{rs1}, X{rs2}, {(signedImm ? simm : zimm)}");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"called instruction: {instructionName}, X{rs1}, X{rs2}, {(signedImm ? simm : zimm)}");
+            }
         }
     }
     public class Instruction_U(Instruction inst) : Instruction(inst.bits)
@@ -115,11 +144,17 @@ namespace RISC_V
         public UInt32 zimm => imm;
         public new void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction_U: rd=0x{rd:X1}, imm=0x{imm:X8}");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"Instruction_U: rd=0x{rd:X1}, imm=0x{imm:X8}");
+            }
         }
         public void DEBUG_PRINT(string instructionName, bool signedImm = true)
         {
-            Debug.WriteLine($"called instruction: {instructionName}, X{rd}, {(signedImm ? simm : zimm)}");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"called instruction: {instructionName}, X{rd}, {(signedImm ? simm : zimm)}");
+            }
         }
     }
     public class Instruction_J(Instruction inst) : Instruction(inst.bits)
@@ -133,7 +168,10 @@ namespace RISC_V
         public UInt32 zimm => ZEXT(imm, 21);
         public new void DEBUG_PRINT()
         {
-            Debug.WriteLine($"Instruction_J: rd=0x{rd:X1}, imm=0x{imm:X4}");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"Instruction_J: rd=0x{rd:X1}, imm=0x{imm:X4}");
+            }
         }
         public void DEBUG_PRINT(string instructionName, bool signedImm = true)
         {
@@ -141,15 +179,24 @@ namespace RISC_V
             {
                 if (simm < 0)
                 {
-                    Debug.WriteLine($"called instruction: {instructionName}, X{rd}, -{Math.Abs(simm)}");
+                    if (DebugLevel.IsDebugEnabled(instructionPrint))
+                    {
+                        Debug.WriteLine($"called instruction: {instructionName}, X{rd}, -{Math.Abs(simm)}");
+                    }
                     return;
                 }else
                 {
-                    Debug.WriteLine($"called instruction: {instructionName}, X{rd}, {Math.Abs(simm)}");
+                    if (DebugLevel.IsDebugEnabled(instructionPrint))
+                    {
+                        Debug.WriteLine($"called instruction: {instructionName}, X{rd}, {Math.Abs(simm)}");
+                    }
                     return;
                 }
             }
-            Debug.WriteLine($"called instruction: {instructionName}, X{rd}, {zimm}");
+            if (DebugLevel.IsDebugEnabled(instructionPrint))
+            {
+                Debug.WriteLine($"called instruction: {instructionName}, X{rd}, {zimm}");
+            }
         }
     }
     public abstract class RiscV_32_Extension(Mem memTarget, OsHandler os, RegisterBlock regs,RiscV_32 instructionSet)
@@ -168,8 +215,13 @@ namespace RISC_V
         public static new readonly short memBytesPerAddress = 1;
         private UInt32 PC = 0;
         private bool blockPC = false;
+        public static readonly string instructionCall = "instructionCall";
+        public static readonly string invalidInstruction = "invalidInstruction";
         public RiscV_32(ref Mem memTarget_, OsHandler os) : base(ref memTarget_, os)
         {
+            DebugLevel.AddType(Instruction.instructionPrint, 1);
+            DebugLevel.AddType(instructionCall, 1);
+            DebugLevel.AddType(invalidInstruction, 3);
             regs_shared = new(32, 32,[false]);
             extensions = [new RV32I(memTarget_, os, regs_shared, this)];
         }
@@ -177,7 +229,10 @@ namespace RISC_V
         {
             if (instruction == 0)
             {
-                Debug.WriteLine($"Instruction is 0, halting execution on illegal opcode.");
+                if (DebugLevel.IsDebugEnabled(invalidInstruction))
+                {
+                    Debug.WriteLine($"Instruction is 0, halting execution on illegal opcode.");
+                }
                 return true;
             }
             bool handled = false;
@@ -189,10 +244,14 @@ namespace RISC_V
                     try
                     {
                         extension.Handle(inst);
-                        Debug.WriteLine($"Instruction handled by extension: {extension.GetType().Name}, opcode: {inst.opcode:B8}");
+                        if (DebugLevel.IsDebugEnabled(instructionCall))
+                        {
+                            Debug.WriteLine($"Instruction handled by extension: {extension.GetType().Name}, opcode: {inst.opcode:B8}");
+                        }
                     }catch(IOException e)
                     {
-                        Debug.WriteLine(e.Message);
+                        if (DebugLevel.IsDebugEnabled(instructionCall))
+                            Debug.WriteLine(e.Message);
                         return true;
                     }
                     handled = true;
@@ -201,8 +260,11 @@ namespace RISC_V
             }
             if (!handled)
             {
-                Debug.WriteLine($"Instruction not handled: {instruction:X8}");
-                Debug.WriteLine($"Instruction opcode: {inst.opcode:X2}");
+                if (DebugLevel.IsDebugEnabled(invalidInstruction))
+                {
+                    Debug.WriteLine($"Instruction not handled: {instruction:X8}");
+                    Debug.WriteLine($"Instruction opcode: {inst.opcode:X2}");
+                }
                 throw new NotImplementedException($"Instruction not in any loaded extension. opcode: 0b{inst.opcode:B8}, PC: 0x{PC:X8}");
             }
             return false;
@@ -292,10 +354,10 @@ namespace RISC_V
         }
         public override void Dump()
         {
-            Debug.WriteLine($"PC: 0x{GetPC():X8}");
+            Console.WriteLine($"PC: 0x{GetPC():X8}");
             for (int reg = 0; reg < regs_shared.Length; reg++)
             {
-                Debug.WriteLine($"Reg x{reg:D2}: 0x{regs_shared.Read((ushort)reg):X8}");
+                Console.WriteLine($"Reg x{reg:D2}: 0x{regs_shared.Read((ushort)reg):X8}");
             }
         }
         public override byte[] RegDump()

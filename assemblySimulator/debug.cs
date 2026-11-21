@@ -6,84 +6,93 @@ using System.Text;
 
 namespace assemblySimulator
 {
-    public class DebugManager
+    public static class DebugLevel
     {
-        private bool enabled = false;
-        private LinkedList<ushort> registerReadStops = new();
-        private LinkedList<ushort> registerWriteStops = new();
-        public void AwaitHalt()
+        private struct DebugContainer
         {
-            throw new NotImplementedException();
+            public uint level;
+            public bool enabled;
         }
-        public void SetBreakOnRegRead(ushort regNum)
+        static readonly Dictionary<string,DebugContainer> debugLevels = [];
+        static uint CurrentLevel = 0;
+        public static void SetDebugLevel(uint level)
         {
-            registerReadStops.AddLast(regNum);
-        }
-        public void SetBreakOnRegWrite(ushort regNum)
-        {
-            registerWriteStops.AddLast(regNum);
-        }
-        public void CallRegRead(ushort regNum, UInt64 value)
-        {
-            if (registerReadStops.Count == 0) return;
-            if (registerReadStops.Contains(regNum))
+            CurrentLevel = level;
+            foreach (var key in debugLevels.Keys.ToList())
             {
-                this.CallSuccessReg(value, regNum, false);
+                DebugContainer current = debugLevels[key];
+                current.enabled = CurrentLevel >= current.level;
+                debugLevels[key] = current;
             }
         }
-        public void CallRegWrite(ushort regNum, UInt64 value)
+        public static void EnableType(string key)
         {
-            if (registerWriteStops.Count == 0) return;
-            if (registerWriteStops.Contains(regNum))
+            if (debugLevels.ContainsKey(key))
             {
-                this.CallSuccessReg(value, regNum, true);
-            }
-        }
-        private void CallSuccessReg(UInt64 value, ushort regNum, bool write)
-        {
-            Console.WriteLine("register breakpoint reached");
-            Console.WriteLine("operation:", write ? "write" : "read");
-            if (write)
-            {
-                Console.WriteLine("the new value being written: ", value);
+                DebugContainer current = debugLevels[key];
+                current.enabled = true;
+                debugLevels[key] = current;
             }
             else
             {
-                Console.WriteLine("the current value being read: ", value);
+                debugLevels[key] = new DebugContainer { level = uint.MaxValue, enabled = true };
             }
-            this.Inspector();
         }
-        public void Inspector()
+        public static string[] GetAllDebugKeys()
         {
-            this.enabled = false;
-            this.Inspector_();
-            this.enabled = true;
+            return [.. debugLevels.Keys];
         }
-        private void Inspector_()
+        public static bool IsDebugEnabled(string key)
         {
-            while (true) {
-                Console.WriteLine("\nwelcome to the debug terminal, please write a command, ? for help");
-                string? userCommand = Console.ReadLine();
-                if (userCommand == null) {
-                    Console.WriteLine("unkown error, leaving terminal");
-                    return;
-                }
-                string CMD = userCommand.Split(' ', 1)[0];
-                string[] args = userCommand.Split(' ', 1)[1].Split(' ');
-                switch (CMD) {
-                    case "exit":
-                        Console.WriteLine("exiting debug terminal");
-                        return;
-                    case "reg":
-                        if (args.Length < 1)
-                        {
-                            Console.WriteLine("missing register number");
-                            break;
-                        }
-                        
-                        break;
-                }
+            return debugLevels.ContainsKey(key) && debugLevels[key].enabled;
+        }
+        public static void AddType(string key, uint level)
+        {
+            Debug.Assert(level > 0);
+            if (debugLevels.ContainsKey(key))
+            {
+                DebugContainer current = debugLevels[key];
+                current.level = level;
+                debugLevels[key] = current;
+                return;
             }
+            debugLevels[key] = new DebugContainer { level = level, enabled = CurrentLevel >= level };
+        }
+    }
+    public class TeeTextWriter(TextWriter console, TextWriter? log) : TextWriter
+        {
+        public override System.Text.Encoding Encoding => console.Encoding;
+
+        public override void Write(char value)
+        {
+            console.Write(value);
+            log?.Write(value);
+        }
+
+        public override void Write(string? value)
+        {
+            console.Write(value);
+            log?.Write(value);
+        }
+
+        public override void WriteLine()
+        {
+            console.WriteLine();
+            log?.WriteLine();
+            Flush();
+        }
+
+        public override void WriteLine(string? value)
+        {
+            console.WriteLine(value);
+            log?.WriteLine(value);
+            Flush();
+        }
+
+        public override void Flush()
+        {
+            console.Flush();
+            log?.Flush();
         }
     }
 }

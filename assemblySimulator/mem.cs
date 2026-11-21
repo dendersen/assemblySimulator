@@ -358,8 +358,18 @@ namespace assemblySimulator
         private MemBlock MemBlocks;
         public readonly UInt64 maxAddress;
         private readonly LinkedList<AddressLock> AddressLocks = new();
+        private static readonly string memWrite = "memWrite";
+        private static readonly string memRead = "memRead";
+        private static readonly string memLock = "memMutexLock";
+        private static readonly string memUnlock = "memMutexUnlock";
+        private static readonly string memModified = "memModified";
         public Mem(UInt64 maxAddress, short bytesPerAddress, UInt64 blockSize)
         {
+            DebugLevel.AddType(memLock, 1);
+            DebugLevel.AddType(memUnlock, 1);
+            DebugLevel.AddType(memModified, 2);
+            DebugLevel.AddType(memWrite, 3);
+            DebugLevel.AddType(memRead, 4);
             this.maxAddress = maxAddress;
             this.bytesPerAddress = bytesPerAddress;
             this.memInUse = new Mutex(false);
@@ -384,13 +394,25 @@ namespace assemblySimulator
             {
                 if (locks.address == address && locks.memUser == Thread.CurrentThread)
                 {
+                    if (DebugLevel.IsDebugEnabled(memLock))
+                    {
+                        Debug.WriteLine($"Address {address:X4} is already locked by the current thread");
+                    }
                     return true;
                 }else if (locks.address == address)
                 {
+                    if (DebugLevel.IsDebugEnabled(memLock))
+                    {
+                        Debug.WriteLine($"Address {address:X4} is locked by another thread");
+                    }
                     return false;
                 }
             }
             AddressLocks.AddLast(new AddressLock() { address = address, memUser = Thread.CurrentThread });
+            if (DebugLevel.IsDebugEnabled(memLock))
+            {
+                Debug.WriteLine($"added and locked address {address:X4}");
+            }
             return true;
         }
         public bool UnlockAddress(UInt64 address)
@@ -399,10 +421,18 @@ namespace assemblySimulator
             {
                 if (locks.address == address && locks.memUser == Thread.CurrentThread)
                 {
+                    if (DebugLevel.IsDebugEnabled(memUnlock))
+                    {
+                        Debug.WriteLine($"Unlocking address {address:X4}");
+                    }
                     AddressLocks.Remove(locks);
                     return true;
                 } else if (locks.address == address)
                 {
+                    if (DebugLevel.IsDebugEnabled(memLock))
+                    {
+                        Debug.WriteLine($"Failed to unlock address {address:X4} because it is locked by another thread");
+                    }
                     return false;
                 }
             }
@@ -466,12 +496,21 @@ namespace assemblySimulator
         }
         public void Write(UInt64 address, UInt64 value)
         {
-            Debug.WriteLine($"Writing {value:X4} to address {address:X4}");
+            if (DebugLevel.IsDebugEnabled(memWrite))
+            {
+                Debug.WriteLine($"Writing {value:X4} to address {address:X4}");
+            }
             if (value >= (1ul << (bytesPerAddress * 8)) && bytesPerAddress != 8)
             {
-                Debug.Write($"Value exceeds maximum value for bytes per address, truncating from {value:X8} ");
+                if (DebugLevel.IsDebugEnabled(memModified))
+                {
+                    Debug.WriteLine($"write value exceeds maximum value for bytes per address, truncating from {value:X8} ");
+                }
                 value &= (1ul << (bytesPerAddress * 8)) - 1;
-                Debug.WriteLine($"to {value:X4}");
+                if (DebugLevel.IsDebugEnabled(memWrite))
+                {
+                    Debug.WriteLine($"to {value:X4}");
+                }
             }
             if (this.LockMem(address))
             {
@@ -487,6 +526,7 @@ namespace assemblySimulator
             {
                 if (MemBlocks.nextBlock == null)
                 {
+                    Debug.WriteLine($"Address 0x{address:X8} out of range (0-{maxAddress:X8}), no next block available");
                     throw new Exception("Address out of range");
                 }
                 MemBlocks = MemBlocks.nextBlock;
@@ -495,6 +535,7 @@ namespace assemblySimulator
             {
                 if (MemBlocks.prevBlock == null)
                 {
+                    Debug.WriteLine($"Address 0x{address:X8} out of range (0-{maxAddress:X8}), no previous block available");
                     throw new Exception("Address out of range");
                 }
                 MemBlocks = MemBlocks.prevBlock;

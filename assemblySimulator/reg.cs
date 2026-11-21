@@ -52,10 +52,13 @@ namespace assemblySimulator
     public class RegisterBlock
     {
         private readonly Reg[] registers;
-        private DebugManager? debuger;
         public readonly int Length;
+        private readonly string WriteReg = "RegisterWrite";
+        private readonly string ReadReg = "RegisterRead";
         public RegisterBlock(int registerCount, ushort registerLength)
         {
+            DebugLevel.AddType(ReadReg, 1);
+            DebugLevel.AddType(WriteReg, 2);
             this.registers = new Reg[registerCount];
             for (int i = 0; i < registerCount; i++)
             {
@@ -118,18 +121,20 @@ namespace assemblySimulator
             }
             this.Length = registerCount;
         }
-        public void SetDebugger(DebugManager debuger)
-        {
-            this.debuger = debuger;
-        }
         public UInt64 Read(ushort reg)
         {
-            this.debuger?.CallRegRead(reg, registers[reg].GetValue());
+            if (DebugLevel.IsDebugEnabled(ReadReg))
+            {
+                Debug.WriteLine($"Reading value {registers[reg].GetValue():x4} from register {reg}");
+            }
             return registers[reg].GetValue();
         }
         public void Write(ushort reg, UInt64 value)
         {
-            this.debuger?.CallRegWrite(reg, value);
+            if (DebugLevel.IsDebugEnabled(WriteReg))
+            {
+                Debug.WriteLine($"Writing value {value:x4} to register {reg}");
+            }
             registers[reg].SetValue(value);
         }
     }

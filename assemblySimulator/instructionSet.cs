@@ -172,7 +172,10 @@ namespace assemblySimulator
         }
         public void WriteStringConsole(String str)
         {
-            Debug.WriteLine($"OS: write called with direct String! Memory calles prefered.");
+            if (DebugLevel.IsDebugEnabled("OS"))
+            {
+                Debug.WriteLine($"OS: write called with direct String! Memory calles prefered.");
+            }
             stdOut.Write(str);
             foreach (TextWriter writer in this.altOut)
             {
@@ -258,7 +261,6 @@ namespace assemblySimulator
     {
         protected Mem memTarget = memTarget;
         protected OsHandler os = os;
-        protected DebugManager? debug;
         public static readonly short memBytesPerAddress = 0;
         public abstract void JumpOverride(UInt64 address);
         public abstract void JumpRelative(Int64 offset);
@@ -299,7 +301,7 @@ namespace assemblySimulator
         public abstract void WriteArrayToMem(UInt64 startAddress, UInt64[] value, int bytesPerIndex);
         public virtual void Dump()
         {
-            Debug.WriteLine($"PC: 0x{GetPC():X8}");
+            Console.WriteLine($"PC: 0x{GetPC():X8}");
         }
         public virtual byte[] RegDump()
         {
@@ -334,7 +336,10 @@ namespace assemblySimulator
             }
 
             loadedInstruction.Add(pluginTypes[pickedIndex - 1]);
-            Console.WriteLine($"Loaded instruction set: {pluginTypes[pickedIndex - 1].Namespace} -> {pluginTypes[pickedIndex - 1].Name}");
+            if (DebugLevel.IsDebugEnabled("OS"))
+            {
+                Debug.WriteLine($"Loaded instruction set: {pluginTypes[pickedIndex - 1].Namespace} -> {pluginTypes[pickedIndex - 1].Name}");
+            }
             return true;
         }
         public static int FindUserPick(List<Type> pluginTypes, int maxAttempts = 10)
@@ -342,8 +347,11 @@ namespace assemblySimulator
             int pickedIndex = -1;
             for (int i = 0; i < maxAttempts; i++)
             {
-                Debug.WriteLine($"performing attempt: {i}/{maxAttempts}");
-                Debug.WriteLine("Enter the number of an instruction to load:");
+                if (DebugLevel.IsDebugEnabled("OS"))
+                {
+                    Debug.WriteLine($"performing attempt: {i}/{maxAttempts}");
+                }
+                Console.WriteLine("Enter the number of an instruction to load:");
                 Console.Write("> ");
                 String? input = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(input))
@@ -364,12 +372,18 @@ namespace assemblySimulator
                         pickedIndex = -1;
                         continue;
                     }
-                    Debug.WriteLine($"Valid number found! {pickedIndex}");
+                    if (DebugLevel.IsDebugEnabled("OS"))
+                    {
+                        Debug.WriteLine($"Valid number found! {pickedIndex}");
+                    }
                     break;
                 }
                 else
                 {
-                    Debug.WriteLine($"input: {input} could not be parsed as integer");
+                    if (DebugLevel.IsDebugEnabled("OS"))
+                    {
+                        Debug.WriteLine($"input: {input} could not be parsed as integer");
+                    }
                     pickedIndex = -1;
                 }
 
@@ -380,20 +394,29 @@ namespace assemblySimulator
                         return index + 1;
                     }
                 }
-                Debug.WriteLine($"did not find any instruction set matching: {input}");
+                if (DebugLevel.IsDebugEnabled("OS"))
+                {
+                    Debug.WriteLine($"did not find any instruction set matching: {input}");
+                }
             }
             return pickedIndex;
         }
         public static List<Type> FindInstructions(Type targetType, List<Type> exclusion)
         {
             string exeDir = AppContext.BaseDirectory;
-            Debug.WriteLine($"Searching for instruction sets in: {exeDir}");
+            if (DebugLevel.IsDebugEnabled("OS"))
+            {
+                Debug.WriteLine($"Searching for instruction sets in: {exeDir}");
+            }
             string[] dllFiles = Directory.GetFiles(exeDir, "*.dll");
             List<Type> pluginTypes = [];
             var context = new InstructionLoader();
             for (int i = 0; i < exclusion.Count; i++)
             {
-                Debug.WriteLine($"Excluded instruction: {{{i}}}", exclusion[i].Name);
+                if (DebugLevel.IsDebugEnabled("OS"))
+                {
+                    Debug.WriteLine($"Excluded instruction: {{{i}}}", exclusion[i].Name);
+                }
             }
             foreach (var dll in dllFiles)
             {
@@ -403,33 +426,51 @@ namespace assemblySimulator
                     Type[] types;
                     try
                     {
-                        Debug.WriteLine($"Loading types from assembly: {dll}");
+                        if (DebugLevel.IsDebugEnabled("OS"))
+                        {
+                            Debug.WriteLine($"Loading types from assembly: {dll}");
+                        }
                         types = assembly.GetTypes();
                     }
                     catch (ReflectionTypeLoadException ex)
                     {
-                        Debug.WriteLine($"Warning: something went wrong while loading types from {dll}, {ex.Message}");
+                        if (DebugLevel.IsDebugEnabled("OS"))
+                        {
+                            Debug.WriteLine($"Warning: something went wrong while loading types from {dll}, {ex.Message}");
+                        }
                         types = ex.Types!;
                     }
                     foreach (Type t in types)
                     {
                         if (t == null) {
-                            Debug.WriteLine($"ignoring null type");
+                            if (DebugLevel.IsDebugEnabled("OS"))
+                            {
+                                Debug.WriteLine($"ignoring null type");
+                            }
                             continue;
                         }
                         if (!targetType.IsAssignableFrom(t))
                         {
-                            Debug.WriteLine($"ignoring class: {t.Name} as it does not extend {targetType.Name}");
+                            if (DebugLevel.IsDebugEnabled("OS"))
+                            {
+                                Debug.WriteLine($"ignoring class: {t.Name} as it does not extend {targetType.Name}");
+                            }
                             continue;
                         }
                         if (t.IsAbstract)
                         {
-                            Debug.WriteLine($"ignoring class: {t.Name} as it is abstract");
+                            if (DebugLevel.IsDebugEnabled("OS"))
+                            {
+                                Debug.WriteLine($"ignoring class: {t.Name} as it is abstract");
+                            }
                             continue;
                         }
                         if (exclusion.Contains(t))
                         {
-                            Debug.WriteLine($"exluding class: {t.Name}");
+                            if (DebugLevel.IsDebugEnabled("OS"))
+                            {
+                                Debug.WriteLine($"exluding class: {t.Name}");
+                            }
                             continue;
                         }
 
@@ -438,11 +479,17 @@ namespace assemblySimulator
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Error loading assembly {dll}: {ex.Message}");
+                    if (DebugLevel.IsDebugEnabled("OS"))
+                    {
+                        Debug.WriteLine($"Error loading assembly {dll}: {ex.Message}");
+                    }
                 }
                 finally
                 {
-                    Debug.WriteLine($"handled file: {dll}");
+                    if (DebugLevel.IsDebugEnabled("OS"))
+                    {
+                        Debug.WriteLine($"handled file: {dll}");
+                    }
                 }
             }
             return pluginTypes;

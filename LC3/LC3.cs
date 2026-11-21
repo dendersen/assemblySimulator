@@ -39,12 +39,11 @@ namespace LC3
             set => bits = value ? (UInt16)(bits | (1 << 15)) : (UInt16)(bits & ~(1 << 15));
         }
     }
-    internal class LC3Executer(OsHandler os, Mem mem, DebugManager? debug, LC3InstructionSet instruct)
+    internal class LC3Executer(OsHandler os, Mem mem, LC3InstructionSet instruct)
     {
         internal RegisterBlock regs = new(8, 16);
         internal OsHandler os = os;
         internal Mem mem = mem;
-        internal DebugManager? debug = debug;
         internal LC3InstructionSet instruct = instruct;
         private PSR psr;
 
@@ -443,15 +442,8 @@ namespace LC3
                     os.WriteStringConsole(regs.Read(0),1, false);
                     break;
                 case 0x25:
-                    if (debug != null)
-                    {
-                        debug.AwaitHalt();
-                    }
-                    else
-                    {
-                        Debug.WriteLine("halt trap called, but no debugger is attached");
-                        System.Environment.Exit(0);
-                    }
+                    Console.WriteLine("halt trap called");
+                    System.Environment.Exit(0);
                     break;
                 default:
                     break;
@@ -465,12 +457,16 @@ namespace LC3
         public static readonly new short memBytesPerAddress = 2;
         internal LC3Executer executer;
         public LC3InstructionSet(ref Mem memTarget_, OsHandler os) : base(ref memTarget_, os) {
-            executer = new LC3Executer(os, memTarget_, debug, this);
+            DebugLevel.AddType("instructionCall", 1);
+            executer = new LC3Executer(os, memTarget_, this);
         }
         public override bool ExecuteInstruction(ulong instruction)
         {
-            Debug.WriteLine($"Executing instruction: 0x{instruction:X4}");
-            Debug.WriteLine($"Executing opcode: 0b{GetOpcode(instruction):B4}");
+            if (DebugLevel.IsDebugEnabled("instructionCall"))
+            {
+                Debug.WriteLine($"Executing instruction: 0x{instruction:X4}");
+                Debug.WriteLine($"Executing opcode: 0b{GetOpcode(instruction):B4}");
+            }
             executer.Handle(instruction);
             return false;
         }

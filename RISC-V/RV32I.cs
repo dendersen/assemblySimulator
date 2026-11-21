@@ -10,14 +10,16 @@ namespace RISC_V
 
     public abstract class InstructionExecutor()
     {
+        public abstract ushort Opcode { get; }
         public abstract bool IsValid(Instruction inst);
         public abstract void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os);
     }
 
 
     internal class LUI : InstructionExecutor{
+        public override ushort Opcode => 0b0110111;
         public override bool IsValid(Instruction inst){
-            return inst.opcode == 0b0110111; // LUI opcode
+            return inst.opcode == Opcode; // LUI opcode
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
             Instruction_U inst_u = new(inst);
@@ -26,8 +28,9 @@ namespace RISC_V
         }
     }
     internal class AUIPC : InstructionExecutor{
+        public override ushort Opcode => 0b0010111;
         public override bool IsValid(Instruction inst){
-            return inst.opcode == 0b0010111; // AUIPC opcode
+            return inst.opcode == Opcode; // AUIPC opcode
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
             Instruction_U inst_u = new(inst);
@@ -36,9 +39,10 @@ namespace RISC_V
         }
     }
     internal class ADDI : InstructionExecutor{
+        public override ushort Opcode => 0b0010011;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
-            return inst_i.opcode == 0b0010011 && // ADDI opcode
+            return inst_i.opcode == Opcode && // ADDI opcode
                    inst_i.funct3 == 0x0;       // ADDI funct3
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
@@ -48,9 +52,10 @@ namespace RISC_V
         }
     }
     internal class SLTI : InstructionExecutor{
+        public override ushort Opcode => 0b0010011;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
-            return inst_i.opcode == 0b0010011 && // SLTI opcode 
+            return inst_i.opcode == Opcode && // SLTI opcode 
                    inst_i.funct3 == 0x2;       // SLTI funct3
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
@@ -60,9 +65,10 @@ namespace RISC_V
         }
     }
     internal class SLTIU : InstructionExecutor{
+        public override ushort Opcode => 0b0010011;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
-            return inst_i.opcode == 0b0010011 && // SLTIU opcode
+            return inst_i.opcode == Opcode && // SLTIU opcode
                    inst_i.funct3 == 0x3;         // SLTIU funct3
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
@@ -72,9 +78,10 @@ namespace RISC_V
         }
     }
     internal class XORI : InstructionExecutor{
+        public override ushort Opcode => 0b0010011;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
-            return inst_i.opcode == 0b0010011 && // XORI opcode
+            return inst_i.opcode == Opcode && // XORI opcode
                    inst_i.funct3 == 0x4;       // XORI funct3
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
@@ -84,9 +91,10 @@ namespace RISC_V
         }
     }
     internal class ORI : InstructionExecutor{
+        public override ushort Opcode => 0b0010011;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
-            return inst_i.opcode == 0b0010011 && // ORI opcode
+            return inst_i.opcode == Opcode && // ORI opcode
                    inst_i.funct3 == 0x6;       // ORI funct3
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
@@ -96,9 +104,10 @@ namespace RISC_V
         }
     }
     internal class ANDI : InstructionExecutor{
+        public override ushort Opcode => 0b0010011;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
-            return inst_i.opcode == 0b0010011 && // ANDI opcode
+            return inst_i.opcode == Opcode && // ANDI opcode
                    inst_i.funct3 == 0x7;         // ANDI funct3
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
@@ -108,10 +117,11 @@ namespace RISC_V
         }
     }
     internal class SLLI : InstructionExecutor{
+        public override ushort Opcode => 0b0010011;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
             ushort funct7 = (ushort)inst.ReadBits(inst.bits, 25, 31);
-            return inst_i.opcode == 0b0010011 && // SLLI opcode
+            return inst_i.opcode == Opcode && // SLLI opcode
                    inst_i.funct3 == 0x1       && // SLLI funct3
                      funct7 == 0x00;       // SLLI funct7
         }
@@ -123,10 +133,11 @@ namespace RISC_V
         }
     }
     internal class SRLI : InstructionExecutor{
+        public override ushort Opcode => 0b0010011;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
             ushort funct7 = (ushort)inst.ReadBits(inst.bits, 25, 31);
-            return inst_i.opcode == 0b0010011 && // SRLI opcode
+            return inst_i.opcode == Opcode && // SRLI opcode
                    inst_i.funct3 == 0x5       && // SRLI funct3
                      funct7 == 0x00;       // SRLI funct7
         }
@@ -138,10 +149,11 @@ namespace RISC_V
         }
     }
     internal class SRAI : InstructionExecutor{
+        public override ushort Opcode => 0b0010011;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
             ushort funct7 = (ushort)inst.ReadBits(inst.bits, 25, 31);
-            return inst_i.opcode == 0b0010011 && // SRAI opcode
+            return inst_i.opcode == Opcode && // SRAI opcode
                    inst_i.funct3 == 0x5 &&        // SRAI funct3
                      funct7 == 0x20;         // SRAI funct7
         }
@@ -153,9 +165,10 @@ namespace RISC_V
         }
     }
     internal class ADD : InstructionExecutor{
+        public override ushort Opcode => 0b0110011;
         public override bool IsValid(Instruction inst){
             Instruction_R inst_r = new(inst);
-            return inst_r.opcode == 0b0110011 && // ADD opcode
+            return inst_r.opcode == Opcode && // ADD opcode
                    inst_r.funct3 == 0x0 &&     // ADD funct3
                    inst_r.funct7 == 0b0000000;   // ADD funct7
         }
@@ -166,9 +179,10 @@ namespace RISC_V
         }
     }
     internal class SUB : InstructionExecutor{
+        public override ushort Opcode => 0b0110011;
         public override bool IsValid(Instruction inst){
             Instruction_R inst_r = new(inst);
-            return inst_r.opcode == 0b0110011 && // SUB opcode
+            return inst_r.opcode == Opcode && // SUB opcode
                    inst_r.funct3 == 0b000 &&     // SUB funct3
                    inst_r.funct7 == 0x20;   // SUB funct7
         }
@@ -179,9 +193,10 @@ namespace RISC_V
         }
     }
     internal class SLL : InstructionExecutor{
+        public override ushort Opcode => 0b0110011;
         public override bool IsValid(Instruction inst){
             Instruction_R inst_r = new(inst);
-            return inst_r.opcode == 0b0110011 && // SLL opcode
+            return inst_r.opcode == Opcode && // SLL opcode
                    inst_r.funct3 == 0x1 &&     // SLL funct3
                    inst_r.funct7 == 0x0;   // SLL funct7
         }
@@ -192,9 +207,10 @@ namespace RISC_V
         }
     }
     internal class SLT : InstructionExecutor{
+        public override ushort Opcode => 0b0110011;
         public override bool IsValid(Instruction inst){
             Instruction_R inst_r = new(inst);
-            return inst_r.opcode == 0b0110011 && // SLT opcode
+            return inst_r.opcode == Opcode && // SLT opcode
                    inst_r.funct3 == 0x2 &&     // SLT funct3
                    inst_r.funct7 == 0x0;   // SLT funct7
         }
@@ -205,9 +221,10 @@ namespace RISC_V
         }
     }
     internal class SLTU : InstructionExecutor{
+        public override ushort Opcode => 0b0110011;
         public override bool IsValid(Instruction inst){
             Instruction_R inst_r = new(inst);
-            return inst_r.opcode == 0b0110011 && // SLTU opcode
+            return inst_r.opcode == Opcode && // SLTU opcode
                    inst_r.funct3 == 0x3 &&     // SLTU funct3
                    inst_r.funct7 == 0x0;   // SLTU funct7
         }
@@ -218,9 +235,10 @@ namespace RISC_V
         }
     }
     internal class XOR : InstructionExecutor{
+        public override ushort Opcode => 0b0110011;
         public override bool IsValid(Instruction inst){
             Instruction_R inst_r = new(inst);
-            return inst_r.opcode == 0b0110011 && // XOR opcode
+            return inst_r.opcode == Opcode && // XOR opcode
                    inst_r.funct3 == 0x4 &&     // XOR funct3
                    inst_r.funct7 == 0x0;   // XOR funct7
         }
@@ -231,9 +249,10 @@ namespace RISC_V
         }
     }
     internal class SRL : InstructionExecutor{
+        public override ushort Opcode => 0b0110011;
         public override bool IsValid(Instruction inst){
             Instruction_R inst_r = new(inst);
-            return inst_r.opcode == 0b0110011 && // SRL opcode
+            return inst_r.opcode == Opcode && // SRL opcode
                    inst_r.funct3 == 0x5 &&     // SRL funct3
                    inst_r.funct7 == 0x0;   // SRL funct7
         }
@@ -244,9 +263,10 @@ namespace RISC_V
         }
     }
     internal class SRA : InstructionExecutor{
+        public override ushort Opcode => 0b0110011;
         public override bool IsValid(Instruction inst){
             Instruction_R inst_r = new(inst);
-            return inst_r.opcode == 0b0110011 && // SRA opcode
+            return inst_r.opcode == Opcode && // SRA opcode
                    inst_r.funct3 == 0x5 &&     // SRA funct3
                    inst_r.funct7 == 0x20;   // SRA funct7
         }
@@ -257,9 +277,10 @@ namespace RISC_V
         }
     }
     internal class OR : InstructionExecutor{
+        public override ushort Opcode => 0b0110011;
         public override bool IsValid(Instruction inst){
             Instruction_R inst_r = new(inst);
-            return inst_r.opcode == 0b0110011 && // OR opcode
+            return inst_r.opcode == Opcode && // OR opcode
                    inst_r.funct3 == 0x6 &&     // OR funct3
                    inst_r.funct7 == 0x0;   // OR funct7
         }
@@ -270,9 +291,10 @@ namespace RISC_V
         }
     }
     internal class AND : InstructionExecutor{
+        public override ushort Opcode => 0b0110011;
         public override bool IsValid(Instruction inst){
             Instruction_R inst_r = new(inst);
-            return inst_r.opcode == 0b0110011 && // AND opcode
+            return inst_r.opcode == Opcode && // AND opcode
                    inst_r.funct3 == 0x7 &&     // AND funct3
                    inst_r.funct7 == 0x0;   // AND funct7
         }
@@ -283,16 +305,21 @@ namespace RISC_V
         }
     }
     internal class ECAL : InstructionExecutor{
+        public override ushort Opcode => 0b1110011;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
-            return inst_i.opcode == 0b1110011 && // ECALL opcode
+            return inst_i.opcode == Opcode && // ECALL opcode
                    inst_i.funct3 == 0x0 &&       // ECALL funct3
                    inst_i.zimm == 0x0;            // ECALL imm
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
             UInt32 action = (UInt32)regs.Read(17);
             UInt32 status = (UInt32)(regs.Read(10) & 0xFFFFFFFF);
-            Debug.WriteLine($"instruction called: ECALL; a7={{{action}}}; a0={{{status}}}");
+            DebugLevel.AddType("ECALL", 1);
+            if (DebugLevel.IsDebugEnabled("ECALL"))
+            {
+                Debug.WriteLine($"instruction called: ECALL; a7={{{action}}}; a0={{{status}}}");
+            }
             switch (action)
             {
                 case 1:
@@ -319,9 +346,10 @@ namespace RISC_V
         }
     }
     internal class LOAD : InstructionExecutor{
+        public override ushort Opcode => 0b0000011;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
-            return inst_i.opcode == 0b0000011; // LOAD opcode
+            return inst_i.opcode == Opcode; // LOAD opcode
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
             Instruction_I inst_i = new(inst);
@@ -339,9 +367,10 @@ namespace RISC_V
         }
     }
     internal class STORE : InstructionExecutor{
+        public override ushort Opcode => 0b0100011;
         public override bool IsValid(Instruction inst){
             Instruction_S inst_s = new(inst);
-            return inst_s.opcode == 0b0100011; // STORE opcode
+            return inst_s.opcode == Opcode; // STORE opcode
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
             Instruction_S inst_s = new(inst);
@@ -355,9 +384,10 @@ namespace RISC_V
         }
     }
     internal class JAL : InstructionExecutor{
+        public override ushort Opcode => 0b1101111;
         public override bool IsValid(Instruction inst){
             Instruction_J inst_j = new(inst);
-            return inst_j.opcode == 0b1101111; // JAL opcode
+            return inst_j.opcode == Opcode; // JAL opcode
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
             Instruction_J inst_j = new(inst);
@@ -367,9 +397,10 @@ namespace RISC_V
         }
     }
     internal class JALR : InstructionExecutor{
+        public override ushort Opcode => 0b1100111;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
-            return inst_i.opcode == 0b1100111; // JALR opcode
+            return inst_i.opcode == Opcode; // JALR opcode
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
             Instruction_I inst_i = new(inst);
@@ -379,9 +410,10 @@ namespace RISC_V
         }
     }
     internal class BEQ : InstructionExecutor{
+        public override ushort Opcode => 0b1100011;
         public override bool IsValid(Instruction inst){
             Instruction_B inst_b = new(inst);
-            return inst_b.opcode == 0b1100011 && //BEQ opcode
+            return inst_b.opcode == Opcode && //BEQ opcode
                    inst_b.funct3 == 0x0;        // BEQ funct3
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
@@ -392,9 +424,10 @@ namespace RISC_V
         }
     }
     internal class BNE : InstructionExecutor{
+        public override ushort Opcode => 0b1100011;
         public override bool IsValid(Instruction inst){
             Instruction_B inst_b = new(inst);
-            return inst_b.opcode == 0b1100011 && // BNE opcode
+            return inst_b.opcode == Opcode && // BNE opcode
                    inst_b.funct3 == 0x1; // BNE funct3
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
@@ -405,9 +438,10 @@ namespace RISC_V
         }
     }
     internal class BLT : InstructionExecutor{
+        public override ushort Opcode => 0b1100011;
         public override bool IsValid(Instruction inst){
             Instruction_B inst_b = new(inst);
-            return inst_b.opcode == 0b1100011 && //BLT opcode
+            return inst_b.opcode == Opcode && //BLT opcode
                    inst_b.funct3 == 0x4; // BLT funct3
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
@@ -418,9 +452,10 @@ namespace RISC_V
         }
     }
     internal class BGE : InstructionExecutor{
+        public override ushort Opcode => 0b1100011;
         public override bool IsValid(Instruction inst){
             Instruction_B inst_b = new(inst);
-            return inst_b.opcode == 0b1100011 && // BGE opcode
+            return inst_b.opcode == Opcode && // BGE opcode
                    inst_b.funct3 == 0x5; // BGE funct3
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
@@ -431,9 +466,10 @@ namespace RISC_V
         }
     }
     internal class BLTU : InstructionExecutor{
+        public override ushort Opcode => 0b1100011;
         public override bool IsValid(Instruction inst){
             Instruction_B inst_b = new(inst);
-            return inst_b.opcode == 0b1100011 && // BLTU opcode
+            return inst_b.opcode == Opcode && // BLTU opcode
                    inst_b.funct3 == 0x6; // BLTU funct3
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
@@ -444,9 +480,10 @@ namespace RISC_V
         }
     }
     internal class BGEU : InstructionExecutor{
+        public override ushort Opcode => 0b1100011;
         public override bool IsValid(Instruction inst){
             Instruction_B inst_b = new(inst);
-            return inst_b.opcode == 0b1100011 && // BGEU opcode
+            return inst_b.opcode == Opcode && // BGEU opcode
                    inst_b.funct3 == 0x7; // BGEU funct3
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
@@ -459,7 +496,8 @@ namespace RISC_V
 
 public class RV32I(Mem memTarget, OsHandler os, RegisterBlock regs, RiscV_32 instructionSet) : RiscV_32_Extension(memTarget, os, regs, instructionSet)
     {
-        InstructionExecutor[] executers = {
+        readonly RegisterBlock regs = regs;
+        readonly InstructionExecutor[] executers = {
             new LUI(),
             new AUIPC(),
             new ADDI(),
@@ -493,8 +531,13 @@ public class RV32I(Mem memTarget, OsHandler os, RegisterBlock regs, RiscV_32 ins
             new BLTU(),
             new BGEU(),
         };
+        ushort[]? opcodes = null;
         public override bool Validate(Instruction inst)
         {
+            opcodes ??= [.. executers.Select(e => e.Opcode).Distinct()];
+            if (!opcodes.Contains(inst.opcode))
+                return false;
+            
             foreach (var executer in executers)
             {
                 if (executer.IsValid(inst))
