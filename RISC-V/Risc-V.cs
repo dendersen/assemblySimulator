@@ -262,8 +262,8 @@ namespace RISC_V
             {
                 if (DebugLevel.IsDebugEnabled(invalidInstruction))
                 {
-                    Debug.WriteLine($"Instruction not handled: {instruction:X8}");
-                    Debug.WriteLine($"Instruction opcode: {inst.opcode:X2}");
+                    Debug.WriteLine($"Instruction not handled: 0x{instruction:X8}");
+                    Debug.WriteLine($"Instruction opcode: 0x{inst.opcode:X2}");
                 }
                 throw new NotImplementedException($"Instruction not in any loaded extension. opcode: 0b{inst.opcode:B8}, PC: 0x{PC:X8}");
             }

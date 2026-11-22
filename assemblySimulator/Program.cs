@@ -247,6 +247,10 @@ public class MainClass
         Console.WriteLine("looking for tests in : " + Directory.GetCurrentDirectory() + "/tests");
         foreach (String testGroup in Directory.GetDirectories("tests/"))
         {
+            if (testGroup.Contains("/.")){
+                Debug.WriteLine("skipping " + testGroup);
+                continue;
+            }
             Console.WriteLine("Running tests for: " + testGroup);
             foreach (String test in Directory.GetFiles(testGroup, "*.bin"))
             {

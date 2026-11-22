@@ -74,7 +74,7 @@ namespace RISC_V
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
             Instruction_I inst_i = new(inst);
             inst_i.DEBUG_PRINT("SLTIU",true);
-            regs.Write(inst_i.rd, ((UInt32)regs.Read(inst_i.rs1) < (UInt32)inst_i.zimm) ? 1ul : 0ul);
+            regs.Write(inst_i.rd, ((UInt32)regs.Read(inst_i.rs1) < (UInt32)inst_i.simm) ? 1ul : 0ul);
         }
     }
     internal class XORI : InstructionExecutor{
@@ -349,7 +349,9 @@ namespace RISC_V
         public override ushort Opcode => 0b0000011;
         public override bool IsValid(Instruction inst){
             Instruction_I inst_i = new(inst);
-            return inst_i.opcode == Opcode; // LOAD opcode
+            return inst_i.opcode == Opcode && // LOAD opcode
+                   inst_i.funct3 < 6 &&
+                   inst_i.funct3 != 3;
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
             Instruction_I inst_i = new(inst);
@@ -370,7 +372,8 @@ namespace RISC_V
         public override ushort Opcode => 0b0100011;
         public override bool IsValid(Instruction inst){
             Instruction_S inst_s = new(inst);
-            return inst_s.opcode == Opcode; // STORE opcode
+            return inst_s.opcode == Opcode && // STORE opcode
+                   inst_s.funct3 < 3;
         }
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
             Instruction_S inst_s = new(inst);
@@ -405,7 +408,7 @@ namespace RISC_V
         public override void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os){
             Instruction_I inst_i = new(inst);
             inst_i.DEBUG_PRINT("JALR",true);
-            regs.Write(inst_i.rd, (UInt32)instructionSet.GetPC());
+            regs.Write(inst_i.rd, (UInt32)instructionSet.GetPC() + 4);
             instructionSet.JumpOverride((regs.Read(inst_i.rs1) + (UInt64)(UInt32)inst_i.simm) & ~1ul, true);
         }
     }
