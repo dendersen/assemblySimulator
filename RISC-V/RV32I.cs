@@ -7,15 +7,12 @@ using System.Diagnostics;
 
 namespace RISC_V
 {
-
     public abstract class InstructionExecutor()
     {
         public abstract ushort Opcode { get; }
         public abstract bool IsValid(Instruction inst);
         public abstract void Execute(Instruction inst, RegisterBlock regs, RiscV_32 instructionSet, Mem mem, OsHandler os);
     }
-
-
     internal class LUI : InstructionExecutor{
         public override ushort Opcode => 0b0110111;
         public override bool IsValid(Instruction inst){
@@ -497,7 +494,7 @@ namespace RISC_V
         }
     }
 
-public class RV32I(Mem memTarget, OsHandler os, RegisterBlock regs, RiscV_32 instructionSet) : RiscV_32_Extension(memTarget, os, regs, instructionSet)
+    public class RV32I(Mem memTarget, OsHandler os, RegisterBlock regs, RiscV_32 instructionSet) : RiscV_32_Extension(memTarget, os, regs, instructionSet)
     {
         readonly RegisterBlock regs = regs;
         readonly InstructionExecutor[] executers = {
