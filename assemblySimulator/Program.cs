@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Reflection;
 public class MainClass
 {
+    public const string DefaultTestSource = "./tests/";
     [STAThread]
     public static void Main()
     {
@@ -53,7 +54,7 @@ public class MainClass
         bool pauseOnFailure = true;
         bool dumpTest = true;
         UInt64 memLength = 0xFFFF;
-        string? filePath = null;
+        bool pickFile = false;
         while(true)
         {
             Console.WriteLine("Options: test, memtest, setmem, sizeFromFile, q, help");
@@ -65,21 +66,13 @@ public class MainClass
             }
             if (option == "test")
             {
-                if (autoTest)
-                {
-                    autoTest = false;
-                    Console.WriteLine("Auto test disabled.");
-                }
-                else
-                {
-                    autoTest = true;
-                    Console.WriteLine("Auto test enabled.");
-                }
+                autoTest = !autoTest;
+                Console.WriteLine("Auto test is now " + (autoTest ? "enabled" : "disabled"));
             }
-            else if (option == "file")
+            else if (option == "testSource")
             {
-                Console.WriteLine("Enter file path:");
-                filePath = FilePicker.ChooseFile("Select a binary file to load into memory");
+                pickFile = !pickFile;
+                Console.WriteLine("Test source is now " + (pickFile ? "picked at start" : $"default ({DefaultTestSource})"));
             }
             else if (option == "memtest")
             {
@@ -113,8 +106,8 @@ public class MainClass
                     {
                         memLength = Convert.ToUInt64(memLengthStr, 10);
                     }
-                    Console.WriteLine($"Memory length set to: {memLength:X} addresses");
-                    Console.WriteLine($"Memory length in bytes: {memLength * (UInt64)memBytesPerAddress:X}");
+                    Console.WriteLine($"Memory length set to: 0x{memLength:X} addresses ({memLength})");
+                    Console.WriteLine($"Memory length in bytes: 0x{memLength * (UInt64)memBytesPerAddress:X} ({memLength * (UInt64)memBytesPerAddress})");
                 }catch (FormatException ex)
                 {
                     Console.WriteLine($"Invalid memory length format: {ex.Message}");
@@ -137,13 +130,13 @@ public class MainClass
             }
             else if (option == "DUMP")
             {
-                Debug.WriteLine("Creating a dump for all test results");
                 dumpTest = !dumpTest;
+                Console.WriteLine("Dump for all test results is now " + (dumpTest ? "enabled" : "disabled"));
             }
             else if (option == "help")
             {
-                Console.WriteLine("test: execute the tests in subdirectories of the 'tests' directory, type again to disable auto test");
-                Console.WriteLine("file: select a binary file to load into memory");
+                Console.WriteLine("test: toggle wether to execute all tests in the 'tests' directory (currently " + (autoTest ? "enabled" : "disabled") + ")");
+                Console.WriteLine("testSource: toggle whether to pick the test source at start or use the default './tests/' directory");
                 Console.WriteLine("memtest: run the memory module test, making sure all values are correctly stored and retrieved");
                 Console.WriteLine("setmem: set the memory length to a prespecified value");
                 Console.WriteLine("sizeFromFile: set the memory length to the size of the file");
@@ -200,13 +193,13 @@ public class MainClass
         if (autoTest)
         {
             Console.WriteLine("Running in auto test mode with dumpTest " + (dumpTest ? "enabled" : "disabled"));
-            RunTest(loadedInstruction[0], memBytesPerAddress, memLength, pauseOnFailure, pauseOnSuccess, dumpTest); 
+            TestRunner.RunTests(loadedInstruction[0], memBytesPerAddress, memLength, pauseOnFailure, pauseOnSuccess, dumpTest, pickFile ? null : ""); 
             return;
         }
         Console.WriteLine("Running with dumpTest " + (dumpTest ? "enabled" : "disabled"));
-        RunArchitecture(loadedInstruction[0], filePath, memBytesPerAddress, memLength);
+        RunArchitecture(loadedInstruction[0], null, memBytesPerAddress, memLength);
     }
-    private static InstructionSet? RunArchitecture(Type loadedInstruction, string? testFile, short memBytesPerAddress, UInt64 memLength, bool printDump = true)
+    public static InstructionSet? RunArchitecture(Type loadedInstruction, string? testFile, short memBytesPerAddress, UInt64 memLength, bool printDump = true)
     {
         byte[] memFile;
         memFile = ReadBinaryFile(testFile);
@@ -241,99 +234,7 @@ public class MainClass
         }
         return instruct;
     }
-    public static void RunTest(Type InstructionSet, short memBytesPerAddress, UInt64 memLength = 0, bool pauseOnFailure = true, bool pauseOnSuccess = true, bool autoDump = false)
-    {
-        // String[] testGroups = {"task1", "task2", "task3", "task4"};
-        Console.WriteLine("looking for tests in : " + Directory.GetCurrentDirectory() + "/tests");
-        foreach (String testGroup in Directory.GetDirectories("tests/"))
-        {
-            if (testGroup.Contains("/.")){
-                Debug.WriteLine("skipping " + testGroup);
-                continue;
-            }
-            Console.WriteLine("Running tests for: " + testGroup);
-            foreach (String test in Directory.GetFiles(testGroup, "*.bin"))
-            {
-                try
-                {
-                    Console.WriteLine("Running test: " + test);
-                    InstructionSet? instruct = RunArchitecture(InstructionSet, test, memBytesPerAddress, memLength, false);
-                    if (instruct == null)
-                    {
-                        Console.WriteLine("Test \e[41mfailed\e[0m: " + test);
-                        Console.WriteLine("Instruction set failed to generate");
-                        continue;
-                    }
-                    byte[] regDump = instruct.RegDump();
-                    
-                    byte[] regTarget = ReadBinaryFile(test.Replace(".bin",".res"));
-                    bool success;
-                    if (regDump.Length != regTarget.Length || !regDump.SequenceEqual(regTarget))
-                    {
-                        Console.WriteLine("Test \e[41mfailed\e[0m: " + test);
-                        success = false;
-                    }
-                    else
-                    {
-                        Console.WriteLine("Test \e[42mpassed\e[0m: " + test);
-                        success = true;
-                    }
-                    string? response = "n";
-                    if (success && pauseOnSuccess)
-                    {
-                        Console.WriteLine("type 'y' to print dump");
-                        response = Console.ReadLine();
-                    }
-                    else if (!success && pauseOnFailure)
-                    {
-                        Console.WriteLine("type 'y' to print dump");
-                        response = Console.ReadLine();
-                    }
-                    bool printDump = response?.ToLower() == "y";
-                    if (printDump || autoDump)
-                    {
-                        if (printDump)
-                        {
-                            instruct.Dump();
-                            Console.WriteLine("regComparison:");
-                        }
-                        File.WriteAllBytes(test.Replace(".bin",".reg.dump"), regDump);
-                        UInt64[] memDumpRaw = instruct.ReadArrayFromMem(0, 1, memLength * (UInt64)memBytesPerAddress);
-                        byte[] memDumpBytes = new byte[memDumpRaw.Length * memBytesPerAddress];
-                        for (int i = 0; i < memDumpRaw.Length; i++)
-                        {
-                            memDumpBytes[i] = (byte)(memDumpRaw[i] & 0xFF);
-                        }
-                        File.WriteAllBytes(test.Replace(".bin",".mem.dump"), memDumpBytes);
-                        if (printDump)
-                        {
-                            for (int i = 0; i < regDump.Length; i += memBytesPerAddress)
-                            {
-                                UInt32 wordGot = BitConverter.ToUInt32(regDump, i);
-                                UInt32 wordExpected = BitConverter.ToUInt32(regTarget, i);
-                                Console.Write($"reg[{i/memBytesPerAddress:D2}]: 0x{wordGot:X8}");
-                                if (wordGot != wordExpected)
-                                {
-                                    Console.Write($" expected: 0x{wordExpected:X8}");
-                                }
-                                Console.WriteLine(",");
-                            }
-                            Console.WriteLine("press enter to continue...");
-                            Console.ReadLine();
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Test \e[41mfailed\e[0m: " + test);
-                    Console.WriteLine("Test encountered an unhandled exception.");
-                    Console.WriteLine(ex.Message);
-                    Console.WriteLine(ex.StackTrace);
-                    return;
-                }
-            }
-        }
-    }
+    
     public static byte[] ReadBinaryFile(string? filePath)
     {
         if (!String.IsNullOrEmpty(filePath))
